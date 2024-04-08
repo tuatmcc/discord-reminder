@@ -1,32 +1,33 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
+import { Hono } from 'hono'
+import { APIInteraction, APIInteractionResponse, InteractionResponseType, InteractionType } from 'discord-api-types/v10';
+import { verifyKey } from 'discord-interactions';
 
-export interface Env {
-	// Example binding to KV. Learn more at https://developers.cloudflare.com/workers/runtime-apis/kv/
-	// MY_KV_NAMESPACE: KVNamespace;
-	//
-	// Example binding to Durable Object. Learn more at https://developers.cloudflare.com/workers/runtime-apis/durable-objects/
-	// MY_DURABLE_OBJECT: DurableObjectNamespace;
-	//
-	// Example binding to R2. Learn more at https://developers.cloudflare.com/workers/runtime-apis/r2/
-	// MY_BUCKET: R2Bucket;
-	//
-	// Example binding to a Service. Learn more at https://developers.cloudflare.com/workers/runtime-apis/service-bindings/
-	// MY_SERVICE: Fetcher;
-	//
-	// Example binding to a Queue. Learn more at https://developers.cloudflare.com/queues/javascript-apis/
-	// MY_QUEUE: Queue;
-}
+const app = new Hono();
 
-export default {
-	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-		return new Response('Hello World!');
-	},
-};
+app.post('/', async (c) => {
+  // verify
+  const signature = c.req.header('x-signature-ed25519');
+  const timestamp = c.req.header('x-signature-timestamp');
+  const body = await c.req.text();
+  const isValidRequest =
+    signature && timestamp && verifyKey(body, signature, timestamp, "DISCORD_PUBLICK_KEY");
+  if (!isValidRequest) {
+    return c.text('Bad request signature.', 401);
+  }
+
+  const interaction: APIInteraction = JSON.parse(body);
+  if (!interaction) {
+    return c.text('Bad request signature.', 401);
+  }
+
+  // interact
+  if (interaction.type === InteractionType.Ping) {
+    return c.json<APIInteractionResponse>({
+      type: InteractionResponseType.Pong,
+    });
+  }
+
+  
+})
+
+export default app
