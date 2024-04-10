@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { APIInteraction, APIInteractionResponse, InteractionResponseType, InteractionType } from 'discord-api-types/v10';
 import { verifyKey } from 'discord-interactions';
 import { Bindings } from './bindings';
+import { TEST_COMMAND } from './commands';
 
 const app = new Hono<{ Bindings: Bindings }>();
 
@@ -31,6 +32,18 @@ app.post('/', async (c) => {
       type: InteractionResponseType.Pong,
     });
   }
-})
+  
+  if(interaction.type == InteractionType.ApplicationCommand){
+    switch(interaction.data.name){
+      case TEST_COMMAND.name:
+        return c.json<APIInteractionResponse>({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            content: "test",
+          },
+        });
+    }
+  }
+});
 
 export default app
