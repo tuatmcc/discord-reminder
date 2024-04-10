@@ -1,9 +1,11 @@
 import { Hono } from 'hono';
-import { APIInteraction, APIInteractionResponse, InteractionResponseType, InteractionType } from 'discord-api-types/v10';
+import { APIInteraction, APIInteractionResponse, ApplicationCommandType, InteractionResponseType, InteractionType, APIApplicationCommandInteractionDataStringOption } from 'discord-api-types/v10';
 import { verifyKey } from 'discord-interactions';
 import { Bindings } from './bindings';
-import { TEST_COMMAND, EVENTS_COMMAND } from './commands';
-import { createEventsResponseMessage } from './events';
+import { TEST_COMMAND, EVENTS_COMMAND, ADD_COMMAND } from './commands';
+
+import { dbUtil } from './db';
+import { buildDisplayEventsMessage } from './buildMessages';
 
 const BITFIELD_EPHEMERAL = 1 << 6; // EPHEMERAL (see: https://discord.com/developers/docs/resources/channel#message-object-message-flags)
 
@@ -35,7 +37,7 @@ app.post('/', async (c) => {
         });
     }
 
-    if (interaction.type == InteractionType.ApplicationCommand) {
+    if (interaction.type == InteractionType.ApplicationCommand && interaction.data.type === ApplicationCommandType.ChatInput) {
         switch (interaction.data.name) {
             case TEST_COMMAND.name:
                 return c.json<APIInteractionResponse>({
@@ -46,10 +48,39 @@ app.post('/', async (c) => {
                     },
                 });
             case EVENTS_COMMAND.name:
+                const events = await new dbUtil(c).readEvents();
                 return c.json<APIInteractionResponse>({
                     type: InteractionResponseType.ChannelMessageWithSource,
                     data: {
-                        content: await createEventsResponseMessage(c),
+                        content: buildDisplayEventsMessage(events),
+                        flags: BITFIELD_EPHEMERAL,
+                    },
+                });
+            case ADD_COMMAND.name:
+                if(interaction.data.options === undefined){
+                    return c.json<APIInteractionResponse>({
+                        type: InteractionResponseType.ChannelMessageWithSource,
+                        data: {
+                            content: 'Invalid arguments',
+                            flags: BITFIELD_EPHEMERAL,
+                        },
+                    });
+                }
+                let name = (interaction.data.options[0] as APIApplicationCommandInteractionDataStringOption).value;
+                let date = (interaction.data.options[1] as APIApplicationCommandInteractionDataStringOption).value;
+                await new dbUtil(c).createEvent({name: name, date: date});
+                return c.json<APIInteractionResponse>({
+                    type: InteractionResponseType.ChannelMessageWithSource,
+                    data: {
+                        content: `Event added: ${name} on ${date}`,
+                        flags: BITFIELD_EPHEMERAL,
+                    },
+                });
+            default:
+                return c.json<APIInteractionResponse>({
+                    type: InteractionResponseType.ChannelMessageWithSource,
+                    data: {
+                        content: 'Invalid command',
                         flags: BITFIELD_EPHEMERAL,
                     },
                 });

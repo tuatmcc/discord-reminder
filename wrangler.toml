@@ -16,6 +16,7 @@ compatibility_date = "2023-12-01"
 binding = "DB"
 database_name = "discord-reminder"
 database_id = "7faafe6d-c63f-49f3-be9b-2415c0ff75be"
+migrations_dir = "drizzle/migrations"
 
 # [ai]
 # binding = "AI"
