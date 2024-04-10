@@ -1,8 +1,13 @@
 import { Hono } from 'hono'
 import { APIInteraction, APIInteractionResponse, InteractionResponseType, InteractionType } from 'discord-api-types/v10';
 import { verifyKey } from 'discord-interactions';
+import { Bindings } from './bindings';
 
-const app = new Hono();
+const app = new Hono<{ Bindings: Bindings }>();
+
+app.get('/', async (c) => {
+  return c.text('Hello, world!');
+});
 
 app.post('/', async (c) => {
   // verify
@@ -10,7 +15,7 @@ app.post('/', async (c) => {
   const timestamp = c.req.header('x-signature-timestamp');
   const body = await c.req.text();
   const isValidRequest =
-    signature && timestamp && verifyKey(body, signature, timestamp, "DISCORD_PUBLICK_KEY");
+  signature && timestamp && verifyKey(body, signature, timestamp, c.env.DISCORD_PUBLIC_KEY);
   if (!isValidRequest) {
     return c.text('Bad request signature.', 401);
   }
@@ -26,8 +31,6 @@ app.post('/', async (c) => {
       type: InteractionResponseType.Pong,
     });
   }
-
-  
 })
 
 export default app
