@@ -2,7 +2,9 @@ import { Hono } from 'hono'
 import { APIInteraction, APIInteractionResponse, InteractionResponseType, InteractionType } from 'discord-api-types/v10';
 import { verifyKey } from 'discord-interactions';
 import { Bindings } from './bindings';
-import { TEST_COMMAND } from './commands';
+import { TEST_COMMAND, EVENTS_COMMAND } from './commands';
+
+const BITFIELD_EPHEMERAL = 1 << 6;
 
 const app = new Hono<{ Bindings: Bindings }>();
 
@@ -40,6 +42,21 @@ app.post('/', async (c) => {
           type: InteractionResponseType.ChannelMessageWithSource,
           data: {
             content: "test",
+            flags: BITFIELD_EPHEMERAL // EPHEMERAL (see: https://discord.com/developers/docs/resources/channel#message-object-message-flags)
+          },
+        });
+      case EVENTS_COMMAND.name:
+        const sql = `select * from events`;
+        let results : any = (await c.env.DB.prepare(sql).all()).results;
+        let message = "";
+        for(const result of results){
+          message += `${result.date}: ${result.name}\n`;
+        }
+        return c.json<APIInteractionResponse>({
+          type: InteractionResponseType.ChannelMessageWithSource,
+          data: {
+            content: message,
+            flags: BITFIELD_EPHEMERAL,
           },
         });
     }

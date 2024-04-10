@@ -1,5 +1,5 @@
 import { getApplicationId } from './util';
-import { TEST_COMMAND } from './commands';
+import { EVENTS_COMMAND, TEST_COMMAND } from './commands';
 import fetch from 'node-fetch';
 
 const token = process.env.DISCORD_BOT_TOKEN;
@@ -15,7 +15,7 @@ const registerCommands = async (url: string) => {
       Authorization: `Bot ${token}`,
     },
     method: 'PUT',
-    body: JSON.stringify([TEST_COMMAND]),
+    body: JSON.stringify([EVENTS_COMMAND]),
   });
 
   if (response.ok) {
@@ -30,6 +30,7 @@ const registerCommands = async (url: string) => {
 
 const registerGlobalCommands = async () => {
   const url = `https://discord.com/api/v10/applications/${getApplicationId(token)}/commands`;
+  console.log(url);
   await registerCommands(url);
 };
 

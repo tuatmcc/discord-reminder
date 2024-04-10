@@ -15,3 +15,8 @@ export const TEST_COMMAND: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     },
   ],
 };
+
+export const EVENTS_COMMAND: RESTPostAPIChatInputApplicationCommandsJSONBody = {
+  name: 'events',
+  description: 'displays all scheduled events',
+};

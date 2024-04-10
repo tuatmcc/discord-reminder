@@ -12,10 +12,10 @@ compatibility_date = "2023-12-01"
 # binding = "MY_BUCKET"
 # bucket_name = "my-bucket"
 
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "my-database"
-# database_id = ""
+[[d1_databases]]
+binding = "DB"
+database_name = "discord-reminder"
+database_id = "7faafe6d-c63f-49f3-be9b-2415c0ff75be"
 
 # [ai]
 # binding = "AI"
