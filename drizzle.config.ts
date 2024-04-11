@@ -5,7 +5,7 @@ export default {
   out: "./drizzle/migrations",
   driver: "d1",
   dbCredentials: {
-    wranglerConfigPath: "wrangler.toml",
+    wranglerConfigPath: "./wrangler.toml",
     dbName: "discord-reminder",
   },
 } satisfies Config;

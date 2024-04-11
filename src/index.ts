@@ -1,11 +1,13 @@
 import { Hono } from 'hono';
-import { APIInteraction, APIInteractionResponse, ApplicationCommandType, InteractionResponseType, InteractionType, APIApplicationCommandInteractionDataStringOption } from 'discord-api-types/v10';
+import { APIInteraction, APIInteractionResponse, ApplicationCommandType, InteractionResponseType, InteractionType, APIApplicationCommandInteractionDataStringOption, Routes } from 'discord-api-types/v10';
 import { verifyKey } from 'discord-interactions';
 import { Bindings } from './bindings';
 import { TEST_COMMAND, EVENTS_COMMAND, ADD_COMMAND } from './commands';
 
 import { dbUtil } from './db';
 import { buildDisplayEventsMessage } from './buildMessages';
+
+import { REST } from '@discordjs/rest';
 
 const BITFIELD_EPHEMERAL = 1 << 6; // EPHEMERAL (see: https://discord.com/developers/docs/resources/channel#message-object-message-flags)
 
@@ -92,15 +94,16 @@ app.post('/', async (c) => {
 // https://zenn.dev/toraco/articles/55f359cbf94862
 
 const scheduled: ExportedHandlerScheduledHandler<Bindings> = async(event, env, ctx) => {
-    // const db = new dbUtil(env.DB);
-    // const events = await db.readEvents();
-    // const client = new Client({intents: [GatewayIntentBits.Guilds]});
-    // client.once(Events.ClientReady, readyClient => {});
-    // client.login(env.DISCORD_BOT_TOKEN);
-    // const channel = client.channels.cache.get('1101435549211967530');
-    // for(const event of events){
-    //     channel?.client
-    // }
+    const db = new dbUtil(env.DB);
+    const events = await db.readEvents();
+    const rest = new REST({version: '10'}).setToken(env.DISCORD_BOT_TOKEN);
+    for(const event of events){ 
+        await rest.post(Routes.channelMessages('1226818417617666139'), {
+            body: {
+                content: 'Event: ' + event.name + ' on ' + event.date,
+            }
+        });
+    }
 }
 
 export default {
