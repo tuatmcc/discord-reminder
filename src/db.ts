@@ -1,4 +1,3 @@
-import { Context } from 'hono';
 import { DrizzleD1Database, drizzle } from "drizzle-orm/d1";
 import { events } from "./schema";
 
@@ -8,11 +7,9 @@ export type Event = {
 }
 
 export class dbUtil{
-    c: Context;
     db: DrizzleD1Database;
-    constructor(c: Context){
-        this.c = c;
-        this.db = drizzle(c.env.DB);
+    constructor(db: D1Database){
+        this.db = drizzle(db);
     }
     async createEvent(event: Event){
         return this.db.insert(events).values(event).run();

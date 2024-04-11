@@ -1,12 +1,15 @@
 {
   "scripts": {
     "dev": "wrangler dev src/index.ts",
+    "schedule": "wrangler dev src/index.ts --test-scheduled",
     "deploy": "wrangler deploy --minify src/index.ts"
   },
   "dependencies": {
+    "@types/node": "^20.12.7",
     "date-fns": "^3.6.0",
     "discord-api-types": "^0.37.79",
     "discord-interactions": "^3.4.0",
+    "discord.js": "^14.12.1",
     "drizzle-orm": "^0.30.7",
     "hono": "^4.2.2",
     "node-fetch": "^3.3.2"
@@ -14,6 +17,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240403.0",
     "drizzle-kit": "^0.20.14",
+    "ts-node": "^10.9.2",
     "wrangler": "^3.47.0"
   }
 }

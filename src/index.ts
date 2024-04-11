@@ -48,7 +48,7 @@ app.post('/', async (c) => {
                     },
                 });
             case EVENTS_COMMAND.name:
-                const events = await new dbUtil(c).readEvents();
+                const events = await new dbUtil(c.env.DB).readEvents();
                 return c.json<APIInteractionResponse>({
                     type: InteractionResponseType.ChannelMessageWithSource,
                     data: {
@@ -68,7 +68,7 @@ app.post('/', async (c) => {
                 }
                 let name = (interaction.data.options[0] as APIApplicationCommandInteractionDataStringOption).value;
                 let date = (interaction.data.options[1] as APIApplicationCommandInteractionDataStringOption).value;
-                await new dbUtil(c).createEvent({name: name, date: date});
+                await new dbUtil(c.env.DB).createEvent({name: name, date: date});
                 return c.json<APIInteractionResponse>({
                     type: InteractionResponseType.ChannelMessageWithSource,
                     data: {
@@ -88,4 +88,22 @@ app.post('/', async (c) => {
     }
 });
 
-export default app;
+// 定期実行する処理
+// https://zenn.dev/toraco/articles/55f359cbf94862
+
+const scheduled: ExportedHandlerScheduledHandler<Bindings> = async(event, env, ctx) => {
+    // const db = new dbUtil(env.DB);
+    // const events = await db.readEvents();
+    // const client = new Client({intents: [GatewayIntentBits.Guilds]});
+    // client.once(Events.ClientReady, readyClient => {});
+    // client.login(env.DISCORD_BOT_TOKEN);
+    // const channel = client.channels.cache.get('1101435549211967530');
+    // for(const event of events){
+    //     channel?.client
+    // }
+}
+
+export default {
+    fetch: app.fetch,
+    scheduled
+};
