@@ -21,6 +21,12 @@ const Top = (props: { events: { name: string, date: string, id: number }[] }) =>
     return (
         <div>
             <h1>Events</h1>
+            <form action="add_event" method="post">
+                <input name="name" type="text"/>
+                <input name="date" type="date" />
+                <input name="time" type="time" />
+                <input type="submit" value="submit"/>
+            </form>
             <ul>
                 {props.events.map(event => (
                     <li>{event.date}: {event.name}</li>
@@ -34,6 +40,22 @@ app.get('/', async (c) => {
     const db = new dbUtil(c.env.DB);
     const events = await db.readEvents();
     return c.html(<Top events={events}/>);
+});
+
+app.post('/add_event', async (c) => {
+    const db = new dbUtil(c.env.DB);
+    const body = await c.req.parseBody();
+    const name = body['name'];
+    const time = body['time'];
+    const date = body['date'];
+    console.log(name, time, date);
+    if(typeof name === 'string' && typeof time === 'string' && typeof date === 'string'){
+        const dateString = date + 'T' + time;
+        if(checkValidStringAsDate(dateString)){
+            await db.createEvent({name: name, date: dateString});
+        }
+    }
+    return c.redirect('/');
 });
 
 app.post('/', async (c) => {
