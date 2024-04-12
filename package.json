@@ -5,8 +5,10 @@
     "deploy": "wrangler deploy --minify src/index.ts"
   },
   "dependencies": {
-    "@discordjs/rest": "^2.2.0",
+    "@discordjs/rest": "^2.0.0",
+    "better-sqlite3": "^9.5.0",
     "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.0.1",
     "discord-api-types": "^0.37.79",
     "discord-interactions": "^3.4.0",
     "drizzle-orm": "^0.30.7",

@@ -1,18 +1,5 @@
 import { ApplicationCommandOptionType, RESTPostAPIApplicationCommandsJSONBody, RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord-api-types/v10';
 
-export const TEST_COMMAND: RESTPostAPIChatInputApplicationCommandsJSONBody = {
-    name: 'test',
-    description: 'test',
-    options: [
-        {
-            type: ApplicationCommandOptionType.String,
-            name: 'content',
-            description: 'test',
-            required: true,
-        },
-    ],
-};
-
 export const EVENTS_COMMAND: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: 'events',
     description: 'displays all scheduled events',
@@ -37,4 +24,4 @@ export const ADD_COMMAND: RESTPostAPIApplicationCommandsJSONBody = {
     ],
 };
 
-export const COMMANDS = [TEST_COMMAND, EVENTS_COMMAND, ADD_COMMAND];
+export const COMMANDS = [EVENTS_COMMAND, ADD_COMMAND];

@@ -1,15 +1,19 @@
 import { Hono } from 'hono';
 import { APIInteraction, APIInteractionResponse, ApplicationCommandType, InteractionResponseType, InteractionType, APIApplicationCommandInteractionDataStringOption, Routes } from 'discord-api-types/v10';
-import { verifyKey } from 'discord-interactions';
+import { verifyKey, Button } from 'discord-interactions';
 import { Bindings } from './bindings';
-import { TEST_COMMAND, EVENTS_COMMAND, ADD_COMMAND } from './commands';
+import { EVENTS_COMMAND, ADD_COMMAND } from './commands';
+import { differenceInMinutes, parseISO } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz'
 
 import { dbUtil } from './db';
+import { checkValidStringAsDate} from './util';
 import { buildDisplayEventsMessage } from './buildMessages';
 
 import { REST } from '@discordjs/rest';
 
 const BITFIELD_EPHEMERAL = 1 << 6; // EPHEMERAL (see: https://discord.com/developers/docs/resources/channel#message-object-message-flags)
+const ALART_TIMINGS = new Set([5, 10, 15, 30, 60]);
 
 const app = new Hono<{ Bindings: Bindings }>();
 
@@ -41,14 +45,6 @@ app.post('/', async (c) => {
 
     if (interaction.type == InteractionType.ApplicationCommand && interaction.data.type === ApplicationCommandType.ChatInput) {
         switch (interaction.data.name) {
-            case TEST_COMMAND.name:
-                return c.json<APIInteractionResponse>({
-                    type: InteractionResponseType.ChannelMessageWithSource,
-                    data: {
-                        content: 'test',
-                        flags: BITFIELD_EPHEMERAL,
-                    },
-                });
             case EVENTS_COMMAND.name:
                 const events = await new dbUtil(c.env.DB).readEvents();
                 return c.json<APIInteractionResponse>({
@@ -70,6 +66,15 @@ app.post('/', async (c) => {
                 }
                 let name = (interaction.data.options[0] as APIApplicationCommandInteractionDataStringOption).value;
                 let date = (interaction.data.options[1] as APIApplicationCommandInteractionDataStringOption).value;
+                if(!checkValidStringAsDate(date)){
+                    return c.json<APIInteractionResponse>({
+                        type: InteractionResponseType.ChannelMessageWithSource,
+                        data: {
+                            content: 'Invalid date format',
+                            flags: BITFIELD_EPHEMERAL,
+                        },
+                    });
+                }
                 await new dbUtil(c.env.DB).createEvent({name: name, date: date});
                 return c.json<APIInteractionResponse>({
                     type: InteractionResponseType.ChannelMessageWithSource,
@@ -97,12 +102,15 @@ const scheduled: ExportedHandlerScheduledHandler<Bindings> = async(event, env, c
     const db = new dbUtil(env.DB);
     const events = await db.readEvents();
     const rest = new REST({version: '10'}).setToken(env.DISCORD_BOT_TOKEN);
-    for(const event of events){ 
-        await rest.post(Routes.channelMessages('1226818417617666139'), {
-            body: {
-                content: 'Event: ' + event.name + ' on ' + event.date,
-            }
-        });
+    for(const event of events){
+        const untilEventMinutes = differenceInMinutes(parseISO(event.date), toZonedTime(new Date(), 'Asia/Tokyo'));
+        if(ALART_TIMINGS.has(untilEventMinutes + 1)){
+            await rest.post(Routes.channelMessages(env.DISCORD_BOT_CHANNEL_ID), {
+                body: {
+                    content: `${event.name} まであと ${untilEventMinutes + 1} 分です`,
+                }
+            });
+        }
     }
 }
 
