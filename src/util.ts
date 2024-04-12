@@ -1,6 +1,4 @@
-import { FormatOptions, ParseISOOptions, format, parse, parseISO } from "date-fns";
-import { Locale } from "discord-api-types/v10";
-import ja from "date-fns/locale/ja";
+import { FormatOptions, ParseISOOptions, format, parseISO } from "date-fns";
 
 export function getApplicationId(token: string) {
     const [base64Id] = token.split('.');

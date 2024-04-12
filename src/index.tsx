@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { jsx } from 'hono/jsx'
 import { APIInteraction, APIInteractionResponse, ApplicationCommandType, InteractionResponseType, InteractionType, APIApplicationCommandInteractionDataStringOption, Routes,  } from 'discord-api-types/v10';
-import { verifyKey, Button, ButtonStyleTypes, MessageComponentTypes } from 'discord-interactions';
+import { Button, ButtonStyleTypes, MessageComponentTypes } from 'discord-interactions';
 import { Bindings } from './bindings';
 import { EVENTS_COMMAND, ADD_COMMAND } from './commands';
 import { differenceInMinutes, parseISO } from 'date-fns';
@@ -9,10 +9,9 @@ import { toZonedTime } from 'date-fns-tz'
 import { dbUtil } from './db';
 import { checkValidStringAsDate} from './util';
 import { buildDisplayEventsMessage } from './buildMessages';
-
+import { authenticateRequest, buildNormalInteractionResponse } from './discord';
 import { REST } from '@discordjs/rest';
 
-const BITFIELD_EPHEMERAL = 1 << 6; // EPHEMERAL (see: https://discord.com/developers/docs/resources/channel#message-object-message-flags)
 const ALART_TIMINGS = new Set([5, 10, 15, 30, 60]);
 
 const app = new Hono<{ Bindings: Bindings }>();
@@ -48,7 +47,6 @@ app.post('/add_event', async (c) => {
     const name = body['name'];
     const time = body['time'];
     const date = body['date'];
-    console.log(name, time, date);
     if(typeof name === 'string' && typeof time === 'string' && typeof date === 'string'){
         const dateString = date + 'T' + time;
         if(checkValidStringAsDate(dateString)){
@@ -60,61 +58,37 @@ app.post('/add_event', async (c) => {
 
 app.post('/delete_event', async (c) => {
     const db = new dbUtil(c.env.DB);
-    const body = await c.req.parseBody();
-    const id = body['id'];
-    if(typeof id === 'string'){
-        if(await db.checkEventExists(parseInt(id))){
-            await db.deleteEvent(parseInt(id));
-        }
-    }
+    const id = (await c.req.parseBody())['id'];
+    if(typeof id !== 'string' ||
+        !await db.checkEventExists(parseInt(id))) return c.redirect('/');
+    await db.deleteEvent(parseInt(id));
     return c.redirect('/');
 });
 
 app.post('/', async (c) => {
-    // verify
-    const signature = c.req.header('x-signature-ed25519');
-    const timestamp = c.req.header('x-signature-timestamp');
-    const body = await c.req.text();
-    const isValidRequest = signature && timestamp && verifyKey(body, signature, timestamp, c.env.DISCORD_PUBLIC_KEY);
-    if (!isValidRequest) {
-        return c.text('Bad request signature.', 401);
+    const authResult = await authenticateRequest(c);
+    if(!authResult.isSuccess){
+        return authResult.result as Response;
     }
 
-    const interaction: APIInteraction = JSON.parse(body);
-    if (!interaction) {
-        return c.text('Bad request signature.', 401);
-    }
-
-    // interact
+    const interaction = authResult.result as APIInteraction;
     if (interaction.type === InteractionType.Ping) {
         return c.json<APIInteractionResponse>({
             type: InteractionResponseType.Pong,
         });
     }
 
-    // button が押されたときの処理
     if(interaction.type === InteractionType.MessageComponent){
+        // button が押されたときの処理
         switch(interaction.data.custom_id.substring(0, 6)){
             case 'delete':
                 const id = parseInt(interaction.data.custom_id.substring(7));
                 const db = new dbUtil(c.env.DB);
                 if(!(await db.checkEventExists(id))){
-                    return c.json<APIInteractionResponse>({
-                        type: InteractionResponseType.ChannelMessageWithSource,
-                        data: {
-                            content: 'このイベントはすでに削除されています',
-                            flags: BITFIELD_EPHEMERAL,
-                        },
-                    });
+                    return buildNormalInteractionResponse(c, 'Event not found');
                 }
                 const deletedEvent = await db.deleteEvent(id);
-                return c.json<APIInteractionResponse>({
-                    type: InteractionResponseType.ChannelMessageWithSource,
-                    data: {
-                        content: `Event deleted: ${deletedEvent.name} on ${deletedEvent.date}`,
-                        flags: BITFIELD_EPHEMERAL,
-                    },
-                });
+                return buildNormalInteractionResponse(c, `Event deleted: ${deletedEvent.name} on ${deletedEvent.date}`);
         }
     }
 
@@ -122,50 +96,22 @@ app.post('/', async (c) => {
         switch (interaction.data.name) {
             case EVENTS_COMMAND.name:
                 const events = await new dbUtil(c.env.DB).readEvents();
-                return c.json<APIInteractionResponse>({
-                    type: InteractionResponseType.ChannelMessageWithSource,
-                    data: {
-                        content: buildDisplayEventsMessage(events),
-                        flags: BITFIELD_EPHEMERAL,
-                    },
-                });
+                return buildNormalInteractionResponse(c, buildDisplayEventsMessage(events));
+
             case ADD_COMMAND.name:
                 if(interaction.data.options === undefined){
-                    return c.json<APIInteractionResponse>({
-                        type: InteractionResponseType.ChannelMessageWithSource,
-                        data: {
-                            content: 'Invalid arguments',
-                            flags: BITFIELD_EPHEMERAL,
-                        },
-                    });
+                    return buildNormalInteractionResponse(c, 'Invalid command');
                 }
                 let name = (interaction.data.options[0] as APIApplicationCommandInteractionDataStringOption).value;
                 let date = (interaction.data.options[1] as APIApplicationCommandInteractionDataStringOption).value;
                 if(!checkValidStringAsDate(date)){
-                    return c.json<APIInteractionResponse>({
-                        type: InteractionResponseType.ChannelMessageWithSource,
-                        data: {
-                            content: 'Invalid date format',
-                            flags: BITFIELD_EPHEMERAL,
-                        },
-                    });
+                    return buildNormalInteractionResponse(c, 'Invalid date format');
                 }
                 await new dbUtil(c.env.DB).createEvent({name: name, date: date});
-                return c.json<APIInteractionResponse>({
-                    type: InteractionResponseType.ChannelMessageWithSource,
-                    data: {
-                        content: `Event added: ${name} on ${date}`,
-                        flags: BITFIELD_EPHEMERAL,
-                    },
-                });
+                return buildNormalInteractionResponse(c, 'Event added');
+
             default:
-                return c.json<APIInteractionResponse>({
-                    type: InteractionResponseType.ChannelMessageWithSource,
-                    data: {
-                        content: 'Invalid command',
-                        flags: BITFIELD_EPHEMERAL,
-                    },
-                });
+                return buildNormalInteractionResponse(c, 'Invalid command');
         }
     }
 });
