@@ -11,29 +11,13 @@ import { checkValidStringAsDate} from './util';
 import { buildDisplayEventsMessage } from './buildMessages';
 import { authenticateRequest, buildNormalInteractionResponse } from './discord';
 import { REST } from '@discordjs/rest';
+import { Top } from './components';
 
+// 何分前に通知するか
 const ALART_TIMINGS = new Set([5, 10, 15, 30, 60]);
+const DISCORD_API_VERSION = '10';
 
 const app = new Hono<{ Bindings: Bindings }>();
-
-const Top = (props: { events: { name: string, date: string, id: number }[] }) => {
-    return (
-        <div>
-            <h1>Events</h1>
-            <form action="add_event" method="post">
-                <input name="name" type="text"/>
-                <input name="date" type="date" />
-                <input name="time" type="time" />
-                <input type="submit" value="submit"/>
-            </form>
-            <ul>
-                {props.events.map(event => (
-                    <li>{event.date}: {event.name} <form action="delete_event" method="post"> <input type="submit" value="delete" /> <input type="hidden" name="id" value={event.id}/> </form> </li>
-                ))}
-            </ul>
-        </div>
-    );
-};
 
 app.get('/', async (c) => {
     const db = new dbUtil(c.env.DB);
@@ -50,7 +34,7 @@ app.post('/add_event', async (c) => {
     if(typeof name === 'string' && typeof time === 'string' && typeof date === 'string'){
         const dateString = date + 'T' + time;
         if(checkValidStringAsDate(dateString)){
-            await db.createEvent({name: name, date: dateString});
+            await db.createEvent(name, dateString);
         }
     }
     return c.redirect('/');
@@ -59,9 +43,7 @@ app.post('/add_event', async (c) => {
 app.post('/delete_event', async (c) => {
     const db = new dbUtil(c.env.DB);
     const id = (await c.req.parseBody())['id'];
-    if(typeof id !== 'string' ||
-        !await db.checkEventExists(parseInt(id))) return c.redirect('/');
-    await db.deleteEvent(parseInt(id));
+    if(typeof id === 'string' && await db.checkEventExists(parseInt(id))) await db.deleteEvent(parseInt(id));
     return c.redirect('/');
 });
 
@@ -88,7 +70,9 @@ app.post('/', async (c) => {
                     return buildNormalInteractionResponse(c, 'Event not found');
                 }
                 const deletedEvent = await db.deleteEvent(id);
-                return buildNormalInteractionResponse(c, `Event deleted: ${deletedEvent.name} on ${deletedEvent.date}`);
+                return buildNormalInteractionResponse(c, `イベントが削除されました: ${deletedEvent.name}, ${deletedEvent.date}`);
+            default:
+                return buildNormalInteractionResponse(c, 'Invalid interaction');
         }
     }
 
@@ -107,8 +91,8 @@ app.post('/', async (c) => {
                 if(!checkValidStringAsDate(date)){
                     return buildNormalInteractionResponse(c, 'Invalid date format');
                 }
-                await new dbUtil(c.env.DB).createEvent({name: name, date: date});
-                return buildNormalInteractionResponse(c, 'Event added');
+                await new dbUtil(c.env.DB).createEvent(name, date);
+                return buildNormalInteractionResponse(c, 'イベントが追加されました');
 
             default:
                 return buildNormalInteractionResponse(c, 'Invalid command');
@@ -122,14 +106,14 @@ app.post('/', async (c) => {
 const scheduled: ExportedHandlerScheduledHandler<Bindings> = async(event, env, ctx) => {
     const db = new dbUtil(env.DB);
     const events = await db.readEvents();
-    const rest = new REST({version: '10'}).setToken(env.DISCORD_BOT_TOKEN);
+    const rest = new REST({version: DISCORD_API_VERSION}).setToken(env.DISCORD_BOT_TOKEN);
     for(const event of events){
         const untilEventMinutes = differenceInMinutes(parseISO(event.date), toZonedTime(new Date(), 'Asia/Tokyo'));
         if(ALART_TIMINGS.has(untilEventMinutes + 1)){
             const button = {
                 type: MessageComponentTypes.BUTTON,
                 style: ButtonStyleTypes.DANGER,
-                label: '削除',
+                label: '削除する',
                 custom_id: `delete-${event.id}`,
                 emoji : {
                     name: '🗑'

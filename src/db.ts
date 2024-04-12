@@ -4,7 +4,8 @@ import { eq } from "drizzle-orm";
 
 export type Event = {
     name: string,
-    date: string
+    date: string,
+    id: number
 }
 
 export class dbUtil{
@@ -12,8 +13,8 @@ export class dbUtil{
     constructor(db: D1Database){
         this.db = drizzle(db);
     }
-    async createEvent(event: Event){
-        return this.db.insert(events).values(event).run();
+    async createEvent(name: string, date: string){
+        return this.db.insert(events).values({name: name, date: date}).run();
     }
     async readEvents(){
         return this.db.select().from(events).all();
