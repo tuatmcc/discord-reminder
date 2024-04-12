@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import { APIInteraction, APIInteractionResponse, ApplicationCommandType, InteractionResponseType, InteractionType, APIApplicationCommandInteractionDataStringOption, Routes } from 'discord-api-types/v10';
-import { verifyKey, Button } from 'discord-interactions';
+import { APIInteraction, APIInteractionResponse, ApplicationCommandType, InteractionResponseType, InteractionType, APIApplicationCommandInteractionDataStringOption, Routes, ButtonStyle,  } from 'discord-api-types/v10';
+import { verifyKey, Button, ButtonStyleTypes, MessageComponentTypes } from 'discord-interactions';
 import { Bindings } from './bindings';
 import { EVENTS_COMMAND, ADD_COMMAND } from './commands';
 import { differenceInMinutes, parseISO } from 'date-fns';
@@ -41,6 +41,32 @@ app.post('/', async (c) => {
         return c.json<APIInteractionResponse>({
             type: InteractionResponseType.Pong,
         });
+    }
+
+    // button が押されたときの処理
+    if(interaction.type === InteractionType.MessageComponent){
+        switch(interaction.data.custom_id.substring(0, 6)){
+            case 'delete':
+                const id = parseInt(interaction.data.custom_id.substring(7));
+                const db = new dbUtil(c.env.DB);
+                if(!(await db.checkEventExists(id))){
+                    return c.json<APIInteractionResponse>({
+                        type: InteractionResponseType.ChannelMessageWithSource,
+                        data: {
+                            content: 'このイベントはすでに削除されています',
+                            flags: BITFIELD_EPHEMERAL,
+                        },
+                    });
+                }
+                const deletedEvent = await db.deleteEvent(id);
+                return c.json<APIInteractionResponse>({
+                    type: InteractionResponseType.ChannelMessageWithSource,
+                    data: {
+                        content: `Event deleted: ${deletedEvent.name} on ${deletedEvent.date}`,
+                        flags: BITFIELD_EPHEMERAL,
+                    },
+                });
+        }
     }
 
     if (interaction.type == InteractionType.ApplicationCommand && interaction.data.type === ApplicationCommandType.ChatInput) {
@@ -105,9 +131,24 @@ const scheduled: ExportedHandlerScheduledHandler<Bindings> = async(event, env, c
     for(const event of events){
         const untilEventMinutes = differenceInMinutes(parseISO(event.date), toZonedTime(new Date(), 'Asia/Tokyo'));
         if(ALART_TIMINGS.has(untilEventMinutes + 1)){
+            const button = {
+                type: MessageComponentTypes.BUTTON,
+                style: ButtonStyleTypes.DANGER,
+                label: '削除',
+                custom_id: `delete-${event.id}`,
+                emoji : {
+                    name: '🗑'
+                }
+            } as Button;
             await rest.post(Routes.channelMessages(env.DISCORD_BOT_CHANNEL_ID), {
                 body: {
                     content: `${event.name} まであと ${untilEventMinutes + 1} 分です`,
+                    components: [
+                        {
+                            type: 1,
+                            components: [button]
+                        }
+                    ]
                 }
             });
         }
