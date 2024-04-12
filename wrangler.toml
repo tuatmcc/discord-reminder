@@ -1,6 +1,6 @@
 name = "discord-reminder"
 compatibility_date = "2023-12-01"
-main = "src/index.ts"
+main = "src/index.tsx"
 # [vars]
 # MY_VAR = "my-variable"
 

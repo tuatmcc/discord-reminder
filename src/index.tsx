@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
-import { APIInteraction, APIInteractionResponse, ApplicationCommandType, InteractionResponseType, InteractionType, APIApplicationCommandInteractionDataStringOption, Routes, ButtonStyle,  } from 'discord-api-types/v10';
+import { jsx } from 'hono/jsx'
+import { APIInteraction, APIInteractionResponse, ApplicationCommandType, InteractionResponseType, InteractionType, APIApplicationCommandInteractionDataStringOption, Routes,  } from 'discord-api-types/v10';
 import { verifyKey, Button, ButtonStyleTypes, MessageComponentTypes } from 'discord-interactions';
 import { Bindings } from './bindings';
 import { EVENTS_COMMAND, ADD_COMMAND } from './commands';
 import { differenceInMinutes, parseISO } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz'
-
 import { dbUtil } from './db';
 import { checkValidStringAsDate} from './util';
 import { buildDisplayEventsMessage } from './buildMessages';
@@ -17,8 +17,23 @@ const ALART_TIMINGS = new Set([5, 10, 15, 30, 60]);
 
 const app = new Hono<{ Bindings: Bindings }>();
 
+const Top = (props: { events: { name: string, date: string, id: number }[] }) => {
+    return (
+        <div>
+            <h1>Events</h1>
+            <ul>
+                {props.events.map(event => (
+                    <li>{event.date}: {event.name}</li>
+                ))}
+            </ul>
+        </div>
+    );
+};
+
 app.get('/', async (c) => {
-    return c.text('Hello, world!');
+    const db = new dbUtil(c.env.DB);
+    const events = await db.readEvents();
+    return c.html(<Top events={events}/>);
 });
 
 app.post('/', async (c) => {

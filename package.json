@@ -1,8 +1,8 @@
 {
   "scripts": {
-    "dev": "wrangler dev src/index.ts",
-    "schedule": "wrangler dev src/index.ts --test-scheduled",
-    "deploy": "wrangler deploy --minify src/index.ts"
+    "dev": "wrangler dev src/index.tsx",
+    "schedule": "wrangler dev src/index.tsx --test-scheduled",
+    "deploy": "wrangler deploy --minify src/index.tsx"
   },
   "dependencies": {
     "@discordjs/rest": "^2.0.0",
