@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
-import { APIInteraction, APIInteractionResponse, ApplicationCommandType, InteractionResponseType, InteractionType, APIApplicationCommandInteractionDataStringOption, Routes, ButtonStyle,  } from 'discord-api-types/v10';
+import { jsx } from 'hono/jsx'
+import { APIInteraction, APIInteractionResponse, ApplicationCommandType, InteractionResponseType, InteractionType, APIApplicationCommandInteractionDataStringOption, Routes,  } from 'discord-api-types/v10';
 import { verifyKey, Button, ButtonStyleTypes, MessageComponentTypes } from 'discord-interactions';
 import { Bindings } from './bindings';
 import { EVENTS_COMMAND, ADD_COMMAND } from './commands';
 import { differenceInMinutes, parseISO } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz'
-
 import { dbUtil } from './db';
 import { checkValidStringAsDate} from './util';
 import { buildDisplayEventsMessage } from './buildMessages';
@@ -17,8 +17,57 @@ const ALART_TIMINGS = new Set([5, 10, 15, 30, 60]);
 
 const app = new Hono<{ Bindings: Bindings }>();
 
+const Top = (props: { events: { name: string, date: string, id: number }[] }) => {
+    return (
+        <div>
+            <h1>Events</h1>
+            <form action="add_event" method="post">
+                <input name="name" type="text"/>
+                <input name="date" type="date" />
+                <input name="time" type="time" />
+                <input type="submit" value="submit"/>
+            </form>
+            <ul>
+                {props.events.map(event => (
+                    <li>{event.date}: {event.name} <form action="delete_event" method="post"> <input type="submit" value="delete" /> <input type="hidden" name="id" value={event.id}/> </form> </li>
+                ))}
+            </ul>
+        </div>
+    );
+};
+
 app.get('/', async (c) => {
-    return c.text('Hello, world!');
+    const db = new dbUtil(c.env.DB);
+    const events = await db.readEvents();
+    return c.html(<Top events={events}/>);
+});
+
+app.post('/add_event', async (c) => {
+    const db = new dbUtil(c.env.DB);
+    const body = await c.req.parseBody();
+    const name = body['name'];
+    const time = body['time'];
+    const date = body['date'];
+    console.log(name, time, date);
+    if(typeof name === 'string' && typeof time === 'string' && typeof date === 'string'){
+        const dateString = date + 'T' + time;
+        if(checkValidStringAsDate(dateString)){
+            await db.createEvent({name: name, date: dateString});
+        }
+    }
+    return c.redirect('/');
+});
+
+app.post('/delete_event', async (c) => {
+    const db = new dbUtil(c.env.DB);
+    const body = await c.req.parseBody();
+    const id = body['id'];
+    if(typeof id === 'string'){
+        if(await db.checkEventExists(parseInt(id))){
+            await db.deleteEvent(parseInt(id));
+        }
+    }
+    return c.redirect('/');
 });
 
 app.post('/', async (c) => {
