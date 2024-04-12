@@ -1,4 +1,4 @@
-import { Event } from "./db";
+import { Event } from './db';
 
 export const buildDisplayEventsMessage = (events: Event[]) => {
     let message = '';

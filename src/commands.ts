@@ -1,4 +1,8 @@
-import { ApplicationCommandOptionType, RESTPostAPIApplicationCommandsJSONBody, RESTPostAPIChatInputApplicationCommandsJSONBody } from 'discord-api-types/v10';
+import {
+    ApplicationCommandOptionType,
+    RESTPostAPIApplicationCommandsJSONBody,
+    RESTPostAPIChatInputApplicationCommandsJSONBody,
+} from 'discord-api-types/v10';
 
 export const EVENTS_COMMAND: RESTPostAPIChatInputApplicationCommandsJSONBody = {
     name: 'events',

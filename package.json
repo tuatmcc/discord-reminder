@@ -2,7 +2,9 @@
   "scripts": {
     "dev": "wrangler dev src/index.tsx",
     "schedule": "wrangler dev src/index.tsx --test-scheduled",
-    "deploy": "wrangler deploy --minify src/index.tsx"
+    "deploy": "wrangler deploy --minify src/index.tsx",
+    "prettier": "prettier --write './**/*.ts*'",
+    "prepare": "husky"
   },
   "dependencies": {
     "@discordjs/rest": "^2.0.0",

@@ -1,15 +1,20 @@
 import { Context } from 'hono';
 import { verifyKey } from 'discord-interactions';
-import { APIInteraction, APIInteractionResponse, InteractionResponseType} from 'discord-api-types/v10';
+import { APIInteraction, APIInteractionResponse, InteractionResponseType } from 'discord-api-types/v10';
 
 const BITFIELD_EPHEMERAL = 1 << 6; // EPHEMERAL (see: https://discord.com/developers/docs/resources/channel#message-object-message-flags)
 
-export type authenticationResult = {
-    isSuccess: boolean;
-    result: Response | APIInteraction;
-}
+type AuthenticateRequestResult =
+    | {
+          isSuccess: false;
+          response: Response;
+      }
+    | {
+          isSuccess: true;
+          interaction: APIInteraction;
+      };
 
-export const authenticateRequest = async (c: Context) => {
+export const authenticateRequest = async (c: Context): Promise<AuthenticateRequestResult> => {
     const signature = c.req.header('x-signature-ed25519');
     const timestamp = c.req.header('x-signature-timestamp');
     const body = await c.req.text();
@@ -17,21 +22,21 @@ export const authenticateRequest = async (c: Context) => {
     if (!isValidRequest) {
         return {
             isSuccess: false,
-            result: c.text('Bad request signature.', 401),
-        }
+            response: c.text('Bad request signature.', 401),
+        };
     }
     const interaction: APIInteraction = JSON.parse(body);
     if (!interaction) {
         return {
             isSuccess: false,
-            result: c.text('Bad request signature.', 401),
-        }
+            response: c.text('Bad request signature.', 401),
+        };
     }
     return {
         isSuccess: true,
-        result: interaction,
-    }
-}
+        interaction: interaction,
+    };
+};
 
 export const buildNormalInteractionResponse = (c: Context, content: string) => {
     return c.json<APIInteractionResponse>({
