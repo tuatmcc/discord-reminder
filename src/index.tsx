@@ -29,7 +29,7 @@ const Top = (props: { events: { name: string, date: string, id: number }[] }) =>
             </form>
             <ul>
                 {props.events.map(event => (
-                    <li>{event.date}: {event.name}</li>
+                    <li>{event.date}: {event.name} <form action="delete_event" method="post"> <input type="submit" value="delete" /> <input type="hidden" name="id" value={event.id}/> </form> </li>
                 ))}
             </ul>
         </div>
@@ -53,6 +53,18 @@ app.post('/add_event', async (c) => {
         const dateString = date + 'T' + time;
         if(checkValidStringAsDate(dateString)){
             await db.createEvent({name: name, date: dateString});
+        }
+    }
+    return c.redirect('/');
+});
+
+app.post('/delete_event', async (c) => {
+    const db = new dbUtil(c.env.DB);
+    const body = await c.req.parseBody();
+    const id = body['id'];
+    if(typeof id === 'string'){
+        if(await db.checkEventExists(parseInt(id))){
+            await db.deleteEvent(parseInt(id));
         }
     }
     return c.redirect('/');
