@@ -8,6 +8,7 @@ import {
     InteractionType,
     APIApplicationCommandInteractionDataStringOption,
     Routes,
+    APIApplicationCommandInteractionDataMentionableOption,
 } from 'discord-api-types/v10';
 import { Button, ButtonStyleTypes, MessageComponentTypes } from 'discord-interactions';
 import { Bindings } from './bindings';
@@ -96,6 +97,20 @@ app.post('/', async (c) => {
                 }
                 let name = (interaction.data.options[0] as APIApplicationCommandInteractionDataStringOption).value;
                 let date = (interaction.data.options[1] as APIApplicationCommandInteractionDataStringOption).value;
+                console.log(interaction.data.options.length);
+                if (interaction.data.options.length === 3) {
+                    // メンション先の指定がある場合、対象がユーザーかロールかを判定する
+                    const mention = interaction.data.options[2] as APIApplicationCommandInteractionDataMentionableOption;
+                    const rest = new REST({ version: DISCORD_API_VERSION }).setToken(c.env.DISCORD_BOT_TOKEN);
+                    try {
+                        const response = await rest.get(Routes.user(mention.value));
+                        if (typeof response === 'object' && response !== null && 'id' in response) {
+                            name = `<@${response.id}> ` + name;
+                        }
+                    } catch (e) {
+                        name = `<@&${mention.value}> ` + name;
+                    }
+                }
                 if (!checkValidStringAsDate(date)) {
                     return buildNormalInteractionResponse(c, 'Invalid date format');
                 }
@@ -122,7 +137,7 @@ const scheduled: ExportedHandlerScheduledHandler<Bindings> = async (event, env, 
                 type: MessageComponentTypes.BUTTON,
                 style: ButtonStyleTypes.DANGER,
                 label: '削除する',
-                    custom_id: `delete-${event.id}`,
+                custom_id: `delete-${event.id}`,
                 emoji: {
                     name: '🗑',
                 },
