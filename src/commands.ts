@@ -29,8 +29,8 @@ export const ADD_COMMAND: RESTPostAPIApplicationCommandsJSONBody = {
             type: ApplicationCommandOptionType.Mentionable,
             name: 'mention',
             description: 'role or user to mention',
-            required: false, 
-        }
+            required: false,
+        },
     ],
 };
 
