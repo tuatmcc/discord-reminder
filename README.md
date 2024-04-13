@@ -10,7 +10,8 @@ npm run deploy
 ## ローカルでテーブルをつくるやつ
 
 ```
-npx drizzle-kit generate:sqlite
+npx drizzle-kit generate:sqlite --schema=src/schema.ts
+wrangler d1 migrations apply discord-reminder --local
 ```
 
 ## フォーマット

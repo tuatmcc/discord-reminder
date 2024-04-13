@@ -37,9 +37,7 @@ app.get('/', async (c) => {
 app.post('/add_event', async (c) => {
     const db = new dbUtil(c.env.DB);
     const body = await c.req.parseBody();
-    const name = body['name'];
-    const time = body['time'];
-    const date = body['date'];
+    const { name, time, date } = body;
     if (typeof name === 'string' && typeof time === 'string' && typeof date === 'string') {
         const dateString = date + 'T' + time;
         if (checkValidStringAsDate(dateString)) {
