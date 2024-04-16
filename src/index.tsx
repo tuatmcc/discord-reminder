@@ -94,10 +94,11 @@ app.post('/', async (c) => {
                     return buildNormalInteractionResponse(c, 'Invalid command');
                 }
                 let name = (interaction.data.options[0] as APIApplicationCommandInteractionDataStringOption).value;
-                let date = (interaction.data.options[1] as APIApplicationCommandInteractionDataStringOption).value;
-                if (interaction.data.options.length === 3) {
+                const date = (interaction.data.options[1] as APIApplicationCommandInteractionDataStringOption).value;
+                const time = (interaction.data.options[2] as APIApplicationCommandInteractionDataStringOption).value;
+                if (interaction.data.options.length === 4) {
                     // メンション先の指定がある場合、対象がユーザーかロールかを判定する
-                    const mention = interaction.data.options[2] as APIApplicationCommandInteractionDataMentionableOption;
+                    const mention = interaction.data.options[3] as APIApplicationCommandInteractionDataMentionableOption;
                     const rest = new REST({ version: DISCORD_API_VERSION }).setToken(c.env.DISCORD_BOT_TOKEN);
                     try {
                         const response = await rest.get(Routes.user(mention.value));
@@ -108,7 +109,7 @@ app.post('/', async (c) => {
                         name = `<@&${mention.value}> ` + name;
                     }
                 }
-                const parsedResult = parseStringToDate(date);
+                const parsedResult = parseStringToDate(date + 'T' + time);
                 if (!parsedResult.success) {
                     return buildNormalInteractionResponse(c, 'Invalid date format');
                 }
