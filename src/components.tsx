@@ -78,7 +78,7 @@ export const Reminder = (props: { events: { name: string; date: string; id: numb
                                             <td>{event.name}</td>
                                             <td>
                                                 <form action="delete_event" method="post">
-                                                    <input type="submit" class="btn btn-danger" value="削除"/>
+                                                    <input type="submit" class="btn btn-danger" value="削除" />
                                                     <input type="hidden" name="id" value={event.id} />
                                                 </form>
                                             </td>
