@@ -7,9 +7,7 @@ export const Reminder = (props: { events: { name: string; date: string; id: numb
                 <meta charset="UTF-8"></meta>
                 <meta name="viewport" content="width=device-width, initial-scale=1.0"></meta>
                 <title>リマインダー管理</title>
-
                 <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"></link>
-
                 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css"></link>
             </head>
             <body>
@@ -27,7 +25,7 @@ export const Reminder = (props: { events: { name: string; date: string; id: numb
                                                 <i class="fas fa-calendar-alt"></i>
                                             </div>
                                         </div>
-                                        <input type="date" class="form-control" id="date" placeholder="MM/DD"></input>
+                                        <input type="date" class="form-control" name="date" placeholder="MM/DD" required></input>
                                     </div>
                                 </div>
 
@@ -39,19 +37,25 @@ export const Reminder = (props: { events: { name: string; date: string; id: numb
                                                 <i class="fas fa-clock"></i>
                                             </div>
                                         </div>
-                                        <input type="time" class="form-control" id="time" placeholder="HH:MM"></input>
+                                        <input type="time" class="form-control" name="time" placeholder="HH:MM" required></input>
                                     </div>
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="event">イベント名</label>
+                                    <label for="event">イベント内容</label>
                                     <div class="input-group">
                                         <div class="input-group-prepend">
                                             <div class="input-group-text">
                                                 <i class="fas fa-calendar-check"></i>
                                             </div>
                                         </div>
-                                        <input type="text" class="form-control" id="event" placeholder="イベント名"></input>
+                                        <textarea
+                                            class="form-control"
+                                            name="name"
+                                            placeholder="イベント内容"
+                                            required
+                                            style="field-sizing: content;"
+                                        ></textarea>
                                     </div>
                                 </div>
                                 <input type="submit" class="btn btn-primary" value="追加"></input>
