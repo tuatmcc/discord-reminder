@@ -14,9 +14,9 @@ import { Button, ButtonStyleTypes, MessageComponentTypes } from 'discord-interac
 import { Bindings } from './bindings';
 import { EVENTS_COMMAND, ADD_COMMAND } from './commands';
 import { differenceInMinutes, parseISO } from 'date-fns';
-import { toZonedTime } from 'date-fns-tz';
+import { format, toZonedTime } from 'date-fns-tz';
 import { dbUtil } from './db';
-import { checkValidStringAsDate } from './util';
+import { parseStringToDate, formatDateToString } from './util';
 import { buildDisplayEventsMessage } from './buildMessages';
 import { authenticateRequest, buildNormalInteractionResponse } from './discord';
 import { REST } from '@discordjs/rest';
@@ -40,8 +40,9 @@ app.post('/add_event', async (c) => {
     const { name, time, date } = body;
     if (typeof name === 'string' && typeof time === 'string' && typeof date === 'string') {
         const dateString = date + 'T' + time;
-        if (checkValidStringAsDate(dateString)) {
-            await db.createEvent(name, dateString);
+        const parsedResult = parseStringToDate(dateString);
+        if (parsedResult.success) {
+            await db.createEvent(name, formatDateToString(parsedResult.date));
         }
     }
     return c.redirect('/');
@@ -95,7 +96,6 @@ app.post('/', async (c) => {
                 }
                 let name = (interaction.data.options[0] as APIApplicationCommandInteractionDataStringOption).value;
                 let date = (interaction.data.options[1] as APIApplicationCommandInteractionDataStringOption).value;
-                console.log(interaction.data.options.length);
                 if (interaction.data.options.length === 3) {
                     // メンション先の指定がある場合、対象がユーザーかロールかを判定する
                     const mention = interaction.data.options[2] as APIApplicationCommandInteractionDataMentionableOption;
@@ -109,10 +109,11 @@ app.post('/', async (c) => {
                         name = `<@&${mention.value}> ` + name;
                     }
                 }
-                if (!checkValidStringAsDate(date)) {
+                const parsedResult = parseStringToDate(date);
+                if (!parsedResult.success) {
                     return buildNormalInteractionResponse(c, 'Invalid date format');
                 }
-                await new dbUtil(c.env.DB).createEvent(name, date);
+                await new dbUtil(c.env.DB).createEvent(name, formatDateToString(parsedResult.date));
                 return buildNormalInteractionResponse(c, 'イベントが追加されました');
 
             default:
