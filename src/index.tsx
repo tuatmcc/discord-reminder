@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { jsx } from 'hono/jsx';
 import {
-    APIInteraction,
     APIInteractionResponse,
     ApplicationCommandType,
     InteractionResponseType,
@@ -14,13 +13,13 @@ import { Button, ButtonStyleTypes, MessageComponentTypes } from 'discord-interac
 import { Bindings } from './bindings';
 import { EVENTS_COMMAND, ADD_COMMAND } from './commands';
 import { differenceInMinutes, parseISO } from 'date-fns';
-import { format, toZonedTime } from 'date-fns-tz';
+import { toZonedTime } from 'date-fns-tz';
 import { dbUtil } from './db';
 import { parseStringToDate, formatDateToString } from './util';
 import { buildDisplayEventsMessage } from './buildMessages';
 import { authenticateRequest, buildNormalInteractionResponse } from './discord';
 import { REST } from '@discordjs/rest';
-import { Top } from './components';
+import { Reminder } from './components';
 
 // 何分前に通知するか
 const ALART_TIMINGS = new Set([5, 10, 15, 30, 60]);
@@ -31,7 +30,7 @@ const app = new Hono<{ Bindings: Bindings }>();
 app.get('/', async (c) => {
     const db = new dbUtil(c.env.DB);
     const events = await db.readEvents();
-    return c.html(<Top events={events} />);
+    return c.html(<Reminder events={events} />);
 });
 
 app.post('/add_event', async (c) => {
