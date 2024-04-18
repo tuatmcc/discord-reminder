@@ -11,6 +11,10 @@ export function formatDateToString(date: Date) {
     return format(date, dateFormatString, { timeZone: 'Asia/Tokyo' } as FormatOptions);
 }
 
+export function formatDateToDisplayString(date: Date) {
+    return format(date, 'yyyy-MM-dd HH:mm', { timeZone: 'Asia/Tokyo' } as FormatOptions);
+}
+
 type parseResult =
     | {
           success: true;

@@ -26,4 +26,7 @@ export class dbUtil {
     async checkEventExists(id: number) {
         return (await this.db.select().from(events).where(eq(events.id, id)).all()).length > 0;
     }
+    async checkEventExistsByName(name: string) {
+        return (await this.db.select().from(events).where(eq(events.name, name)).all()).length > 0;
+    }
 }
