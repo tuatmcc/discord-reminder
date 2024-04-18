@@ -19,7 +19,7 @@ database_id = "7faafe6d-c63f-49f3-be9b-2415c0ff75be"
 migrations_dir = "drizzle/migrations"
 
 [triggers]
-crons = ["* * * * *"]
+crons = ["* * * * *", "0 * * * *"]
 
 # [ai]
 # binding = "AI"

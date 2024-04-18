@@ -16,10 +16,11 @@ import { differenceInMinutes, parseISO } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { dbUtil } from './db';
 import { parseStringToDate, formatDateToString } from './util';
-import { buildDisplayEventsMessage } from './buildMessages';
+import { buildContestEventMessage, buildDisplayEventsMessage } from './buildMessages';
 import { authenticateRequest, buildNormalInteractionResponse } from './discord';
 import { REST } from '@discordjs/rest';
 import { Reminder } from './components';
+import { getFutureContests } from './crawler';
 
 // 何分前に通知するか
 const ALART_TIMINGS = new Set([5, 10, 15, 30, 60]);
@@ -31,6 +32,11 @@ app.get('/', async (c) => {
     const db = new dbUtil(c.env.DB);
     const events = await db.readEvents();
     return c.html(<Reminder events={events} />);
+});
+
+app.get('/create_contests', async (c) => {
+    await addFutureContests(c.env);
+    return c.redirect('/');
 });
 
 app.post('/add_event', async (c) => {
@@ -124,7 +130,7 @@ app.post('/', async (c) => {
 // 定期実行する処理
 // https://zenn.dev/toraco/articles/55f359cbf94862
 
-const scheduled: ExportedHandlerScheduledHandler<Bindings> = async (event, env, ctx) => {
+const notifyNearEvents = async (env: Bindings) => {
     const db = new dbUtil(env.DB);
     const events = await db.readEvents();
     const rest = new REST({ version: DISCORD_API_VERSION }).setToken(env.DISCORD_BOT_TOKEN);
@@ -152,6 +158,28 @@ const scheduled: ExportedHandlerScheduledHandler<Bindings> = async (event, env, 
                 },
             });
         }
+    }
+};
+
+const addFutureContests = async (env: Bindings) => {
+    const db = new dbUtil(env.DB);
+    const contests = await getFutureContests();
+    for (const contest of contests) {
+        const message = buildContestEventMessage(contest);
+        if (!(await db.checkEventExistsByName(message))) {
+            await db.createEvent(message, formatDateToString(contest.time));
+        }
+    }
+};
+
+const scheduled: ExportedHandlerScheduledHandler<Bindings> = async (event, env, ctx) => {
+    switch (event.cron) {
+        case '* * * * *':
+            await notifyNearEvents(env);
+            break;
+        case '0 * * * *':
+            await addFutureContests(env);
+            break;
     }
 };
 
