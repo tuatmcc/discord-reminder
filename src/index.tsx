@@ -100,7 +100,8 @@ app.post('/', async (c) => {
                     return buildNormalInteractionResponse(c, 'Invalid command');
                 }
                 let name = (interaction.data.options[0] as APIApplicationCommandInteractionDataStringOption).value;
-                let date = (interaction.data.options[1] as APIApplicationCommandInteractionDataStringOption).value;
+                const date = (interaction.data.options[1] as APIApplicationCommandInteractionDataStringOption).value;
+                const time = (interaction.data.options[2] as APIApplicationCommandInteractionDataStringOption).value;
                 for (let i = interaction.data.options.length - 1; i >= 2; i--) {
                     const mention = interaction.data.options[i] as APIApplicationCommandInteractionDataMentionableOption;
                     const rest = new REST({ version: DISCORD_API_VERSION }).setToken(c.env.DISCORD_BOT_TOKEN);
@@ -113,7 +114,7 @@ app.post('/', async (c) => {
                         name = `<@&${mention.value}> ` + name;
                     }
                 }
-                const parsedResult = parseStringToDate(date);
+                const parsedResult = parseStringToDate(date + 'T' + time);
                 if (!parsedResult.success) {
                     return buildNormalInteractionResponse(c, 'Invalid date format');
                 }

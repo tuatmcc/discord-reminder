@@ -22,7 +22,13 @@ export const ADD_COMMAND: RESTPostAPIApplicationCommandsJSONBody = {
         {
             type: ApplicationCommandOptionType.String,
             name: 'date',
-            description: 'date of the event',
+            description: 'date of the event. Format: (YYYY-)MM-DD',
+            required: true,
+        },
+        {
+            type: ApplicationCommandOptionType.String,
+            name: 'time',
+            description: 'time of the event. Format: HH:MM',
             required: true,
         },
         {
