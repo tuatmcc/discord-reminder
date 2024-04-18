@@ -101,9 +101,8 @@ app.post('/', async (c) => {
                 }
                 let name = (interaction.data.options[0] as APIApplicationCommandInteractionDataStringOption).value;
                 let date = (interaction.data.options[1] as APIApplicationCommandInteractionDataStringOption).value;
-                if (interaction.data.options.length === 3) {
-                    // メンション先の指定がある場合、対象がユーザーかロールかを判定する
-                    const mention = interaction.data.options[2] as APIApplicationCommandInteractionDataMentionableOption;
+                for (let i = interaction.data.options.length - 1; i >= 2; i--) {
+                    const mention = interaction.data.options[i] as APIApplicationCommandInteractionDataMentionableOption;
                     const rest = new REST({ version: DISCORD_API_VERSION }).setToken(c.env.DISCORD_BOT_TOKEN);
                     try {
                         const response = await rest.get(Routes.user(mention.value));
