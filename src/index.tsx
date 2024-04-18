@@ -102,7 +102,7 @@ app.post('/', async (c) => {
                 let name = (interaction.data.options[0] as APIApplicationCommandInteractionDataStringOption).value;
                 const date = (interaction.data.options[1] as APIApplicationCommandInteractionDataStringOption).value;
                 const time = (interaction.data.options[2] as APIApplicationCommandInteractionDataStringOption).value;
-                for (let i = interaction.data.options.length - 1; i >= 2; i--) {
+                for (let i = interaction.data.options.length - 1; i >= 3; i--) {
                     const mention = interaction.data.options[i] as APIApplicationCommandInteractionDataMentionableOption;
                     const rest = new REST({ version: DISCORD_API_VERSION }).setToken(c.env.DISCORD_BOT_TOKEN);
                     try {
