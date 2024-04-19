@@ -1,10 +1,5 @@
 import { FormatOptions, ParseOptions, format, parse } from 'date-fns';
 
-export function getApplicationId(token: string) {
-    const [base64Id] = token.split('.');
-    return atob(base64Id);
-}
-
 const dateFormatString = "yyyy-MM-dd'T'HH:mm";
 
 export function formatDateToString(date: Date) {

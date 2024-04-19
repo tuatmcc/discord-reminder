@@ -14,6 +14,11 @@ type AuthenticateRequestResult =
           interaction: APIInteraction;
       };
 
+export function getApplicationId(token: string) {
+    const [base64Id] = token.split('.');
+    return atob(base64Id);
+}
+
 export const authenticateRequest = async (c: Context): Promise<AuthenticateRequestResult> => {
     const signature = c.req.header('x-signature-ed25519');
     const timestamp = c.req.header('x-signature-timestamp');
