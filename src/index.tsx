@@ -21,6 +21,7 @@ import { authenticateRequest, buildNormalInteractionResponse } from './lib/disco
 import { REST } from '@discordjs/rest';
 import { Reminder, ReminderAdmin } from './components';
 import { getFutureContests } from './lib/crawler';
+import { basicAuth } from 'hono/basic-auth';
 
 // 何分前に通知するか
 const ALART_TIMINGS = new Set([5, 10, 15, 30, 60]);
@@ -28,19 +29,30 @@ const DISCORD_API_VERSION = '10';
 
 const app = new Hono<{ Bindings: Bindings }>();
 
+app.all(
+    '/auth/*',
+    async (c, next) => {
+        const auth = basicAuth({
+            username: c.env.BASIC_AUTH_USERNAME,
+            password: c.env.BASIC_AUTH_PASSWORD,
+        })
+        return auth(c, next)
+    }
+)
+
 app.get('/', async (c) => {
     const db = new dbUtil(c.env.DB);
     const events = await db.readEvents();
     return c.html(<Reminder events={events} />);
 });
 
-app.get('/admin', async (c) => {
+app.get('/auth', async (c) => {
     const db = new dbUtil(c.env.DB);
     const events = await db.readEvents();
     return c.html(<ReminderAdmin events={events} />);
 });
 
-app.post('/add_event', async (c) => {
+app.post('/auth/add_event', async (c) => {
     const db = new dbUtil(c.env.DB);
     const body = await c.req.parseBody();
     const { name, time, date } = body;
@@ -51,14 +63,14 @@ app.post('/add_event', async (c) => {
             await db.createEvent(name, formatDateToString(parsedResult.date));
         }
     }
-    return c.redirect('/admin');
+    return c.redirect('/auth');
 });
 
-app.post('/delete_event', async (c) => {
+app.post('/auth/delete_event', async (c) => {
     const db = new dbUtil(c.env.DB);
     const id = (await c.req.parseBody())['id'];
     if (typeof id === 'string' && (await db.checkEventExists(parseInt(id)))) await db.deleteEvent(parseInt(id));
-    return c.redirect('/admin');
+    return c.redirect('/auth');
 });
 
 app.post('/', async (c) => {

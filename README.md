@@ -14,8 +14,14 @@ Discord の bot のトークンを設定する必要がある
 
 ### ローカル
 
+`.dev.vars` を `discord-reminder` の直下に作成して以下の内容を記述する
+
 ```
-export DISCORD_BOT_TOKEN=""
+DISCORD_PUBLIC_KEY = ""
+DISCORD_BOT_TOKEN = ""
+DISCORD_BOT_CHANNEL_ID = ""
+BASIC_AUTH_PASSWORD=""
+BASIC_AUTH_USERNAME=""
 ```
 ### cloudflare
 
