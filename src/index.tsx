@@ -19,7 +19,7 @@ import { parseStringToDate, formatDateToString } from './lib/util';
 import { buildContestEventMessage, buildDisplayEventsMessage } from './lib/date';
 import { authenticateRequest, buildNormalInteractionResponse } from './lib/discord';
 import { REST } from '@discordjs/rest';
-import { Reminder } from './components';
+import { Reminder, ReminderAdmin } from './components';
 import { getFutureContests } from './lib/crawler';
 
 // 何分前に通知するか
@@ -34,9 +34,10 @@ app.get('/', async (c) => {
     return c.html(<Reminder events={events} />);
 });
 
-app.get('/create_contests', async (c) => {
-    await addFutureContests(c.env);
-    return c.redirect('/');
+app.get('/admin', async (c) => {
+    const db = new dbUtil(c.env.DB);
+    const events = await db.readEvents();
+    return c.html(<ReminderAdmin events={events} />);
 });
 
 app.post('/add_event', async (c) => {
@@ -50,14 +51,14 @@ app.post('/add_event', async (c) => {
             await db.createEvent(name, formatDateToString(parsedResult.date));
         }
     }
-    return c.redirect('/');
+    return c.redirect('/admin');
 });
 
 app.post('/delete_event', async (c) => {
     const db = new dbUtil(c.env.DB);
     const id = (await c.req.parseBody())['id'];
     if (typeof id === 'string' && (await db.checkEventExists(parseInt(id)))) await db.deleteEvent(parseInt(id));
-    return c.redirect('/');
+    return c.redirect('/admin');
 });
 
 app.post('/', async (c) => {
