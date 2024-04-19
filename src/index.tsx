@@ -22,6 +22,7 @@ import { REST } from '@discordjs/rest';
 import { Reminder, ReminderAdmin } from './components';
 import { getFutureContests } from './lib/crawler';
 import { basicAuth } from 'hono/basic-auth';
+import { marked } from 'marked';
 
 // 何分前に通知するか
 const ALART_TIMINGS = new Set([5, 10, 15, 30, 60]);
@@ -40,12 +41,18 @@ app.all('/auth/*', async (c, next) => {
 app.get('/', async (c) => {
     const db = new dbUtil(c.env.DB);
     const events = await db.readEvents();
+    for (const event of events) {
+        event.name = await marked(event.name);
+    }
     return c.html(<Reminder events={events} />);
 });
 
 app.get('/auth', async (c) => {
     const db = new dbUtil(c.env.DB);
     const events = await db.readEvents();
+    for (const event of events) {
+        event.name = await marked(event.name);
+    }
     return c.html(<ReminderAdmin events={events} />);
 });
 

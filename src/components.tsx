@@ -121,7 +121,7 @@ const Events = (props: { events: Event[]; admin: boolean }) => {
                         {props.events.map((event) => (
                             <tr>
                                 <td>{event.date}</td>
-                                <td>{event.name}</td>
+                                <td dangerouslySetInnerHTML={{ __html: event.name }}></td>
                                 {props.admin && (
                                     <td>
                                         <form action="auth/delete_event" method="post">
