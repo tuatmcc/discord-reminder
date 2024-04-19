@@ -29,16 +29,13 @@ const DISCORD_API_VERSION = '10';
 
 const app = new Hono<{ Bindings: Bindings }>();
 
-app.all(
-    '/auth/*',
-    async (c, next) => {
-        const auth = basicAuth({
-            username: c.env.BASIC_AUTH_USERNAME,
-            password: c.env.BASIC_AUTH_PASSWORD,
-        })
-        return auth(c, next)
-    }
-)
+app.all('/auth/*', async (c, next) => {
+    const auth = basicAuth({
+        username: c.env.BASIC_AUTH_USERNAME,
+        password: c.env.BASIC_AUTH_PASSWORD,
+    });
+    return auth(c, next);
+});
 
 app.get('/', async (c) => {
     const db = new dbUtil(c.env.DB);
