@@ -50,9 +50,7 @@ app.get('/', async (c) => {
 });
 
 app.get('/update', async (c) => {
-    const db = new dbUtil(c.env.DB);
-    await updateUserTable(c.env);
-    await updateRoleTable(c.env);
+    await updateChannelTable(c.env);
     return c.redirect('/');
 });
 
@@ -212,12 +210,16 @@ const notifyNearEvents = async (env: Bindings) => {
 const updateUserTable = async (env: Bindings) => {
     const rest = new REST({ version: DISCORD_API_VERSION }).setToken(env.DISCORD_BOT_TOKEN);
     const guildUsers = (await rest.get(Routes.guildMembers(env.DISCORD_BOT_GUILD_ID), { query: makeURLSearchParams({ limit: 1000 }) })) as {
-        user: { id: string; global_name: string };
+        user: { id: string; username: string; global_name: string };
     }[];
     const db = new dbUtil(env.DB);
     for (const user of guildUsers) {
         if (!(await db.checkUserExists(user.user.id))) {
-            await db.createUser(user.user.id, user.user.global_name);
+            if (user.user.global_name === null) {
+                await db.createUser(user.user.id, user.user.username);
+            } else {
+                await db.createUser(user.user.id, user.user.global_name);
+            }
         }
     }
 };
@@ -229,6 +231,17 @@ const updateRoleTable = async (env: Bindings) => {
     for (const role of guildRoles) {
         if (!(await db.checkRoleExists(role.id))) {
             await db.createRole(role.id, role.name);
+        }
+    }
+};
+
+const updateChannelTable = async (env: Bindings) => {
+    const rest = new REST({ version: DISCORD_API_VERSION }).setToken(env.DISCORD_BOT_TOKEN);
+    const guildChannels = (await rest.get(Routes.guildChannels(env.DISCORD_BOT_GUILD_ID))) as { id: string; name: string }[];
+    const db = new dbUtil(env.DB);
+    for (const channel of guildChannels) {
+        if (!(await db.checkChannelExists(channel.id))) {
+            await db.createChannel(channel.id, channel.name);
         }
     }
 };

@@ -1,10 +1,11 @@
 import { Event } from '../types/event';
 import { Contest } from '../types/contest';
+import { formatDateToString } from './date';
 
 export const buildDisplayEventsMessage = (events: Event[]) => {
     let message = '';
     for (const event of events) {
-        message += `${event.date}: ${event.name}\n`;
+        message += `${formatDateToString(event.date)}: ${event.title}\n`;
     }
     return message;
 };
