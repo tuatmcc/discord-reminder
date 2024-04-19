@@ -15,8 +15,8 @@ export const ADD_COMMAND: RESTPostAPIApplicationCommandsJSONBody = {
     options: [
         {
             type: ApplicationCommandOptionType.String,
-            name: 'name',
-            description: 'name of the event',
+            name: 'title',
+            description: 'title of the event',
             required: true,
         },
         {
@@ -30,6 +30,12 @@ export const ADD_COMMAND: RESTPostAPIApplicationCommandsJSONBody = {
             name: 'time',
             description: 'time of the event. Format: HH:MM',
             required: true,
+        },
+        {
+            type: ApplicationCommandOptionType.String,
+            name: 'content',
+            description: 'description of the event',
+            required: false,
         },
         {
             type: ApplicationCommandOptionType.Mentionable,

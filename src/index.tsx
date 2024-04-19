@@ -15,14 +15,15 @@ import { EVENTS_COMMAND, ADD_COMMAND } from './commands';
 import { differenceInMinutes, parseISO } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { dbUtil } from './lib/db';
-import { parseStringToDate, formatDateToString } from './lib/util';
-import { buildContestEventMessage, buildDisplayEventsMessage } from './lib/date';
+import { parseStringToDate, formatDateToString } from './lib/date';
+import { buildContestEventMessage, buildDisplayEventsMessage } from './lib/message';
 import { authenticateRequest, buildNormalInteractionResponse } from './lib/discord';
-import { REST } from '@discordjs/rest';
+import { REST, makeURLSearchParams } from '@discordjs/rest';
 import { Reminder, ReminderAdmin } from './components';
 import { getFutureContests } from './lib/crawler';
 import { basicAuth } from 'hono/basic-auth';
 import { marked } from 'marked';
+import { Event } from './types/event';
 
 // 何分前に通知するか
 const ALART_TIMINGS = new Set([5, 10, 15, 30, 60]);
@@ -42,16 +43,25 @@ app.get('/', async (c) => {
     const db = new dbUtil(c.env.DB);
     const events = await db.readEvents();
     for (const event of events) {
-        event.name = await marked(event.name);
+        event.title = await marked(event.title);
+        event.content = await marked(event.content);
     }
     return c.html(<Reminder events={events} />);
+});
+
+app.get('/update', async (c) => {
+    const db = new dbUtil(c.env.DB);
+    await updateUserTable(c.env);
+    await updateRoleTable(c.env);
+    return c.redirect('/');
 });
 
 app.get('/auth', async (c) => {
     const db = new dbUtil(c.env.DB);
     const events = await db.readEvents();
     for (const event of events) {
-        event.name = await marked(event.name);
+        event.title = await marked(event.title);
+        event.content = await marked(event.content);
     }
     return c.html(<ReminderAdmin events={events} />);
 });
@@ -59,12 +69,19 @@ app.get('/auth', async (c) => {
 app.post('/auth/add_event', async (c) => {
     const db = new dbUtil(c.env.DB);
     const body = await c.req.parseBody();
-    const { name, time, date } = body;
-    if (typeof name === 'string' && typeof time === 'string' && typeof date === 'string') {
-        const dateString = date + 'T' + time;
+    const { title, content, time, date } = body;
+    if (typeof title === 'string' && typeof content === 'string' && typeof time === 'string' && typeof date === 'string') {
+        const dateString = date + ' ' + time;
         const parsedResult = parseStringToDate(dateString);
         if (parsedResult.success) {
-            await db.createEvent(name, formatDateToString(parsedResult.date));
+            await db.createEvent(
+                {
+                    title: title,
+                    content: content,
+                    date: parsedResult.date,
+                } as Event,
+                c.env.DISCORD_BOT_CHANNEL_ID,
+            );
         }
     }
     return c.redirect('/auth');
@@ -100,7 +117,7 @@ app.post('/', async (c) => {
                     return buildNormalInteractionResponse(c, 'Event not found');
                 }
                 const deletedEvent = await db.deleteEvent(id);
-                return buildNormalInteractionResponse(c, `イベントが削除されました: ${deletedEvent.name}, ${deletedEvent.date}`);
+                return buildNormalInteractionResponse(c, `イベントが削除されました: ${deletedEvent.title}, ${deletedEvent.date}`);
             default:
                 return buildNormalInteractionResponse(c, 'Invalid interaction');
         }
@@ -116,26 +133,40 @@ app.post('/', async (c) => {
                 if (interaction.data.options === undefined) {
                     return buildNormalInteractionResponse(c, 'Invalid command');
                 }
-                let name = (interaction.data.options[0] as APIApplicationCommandInteractionDataStringOption).value;
+                const title = (interaction.data.options[0] as APIApplicationCommandInteractionDataStringOption).value;
                 const date = (interaction.data.options[1] as APIApplicationCommandInteractionDataStringOption).value;
                 const time = (interaction.data.options[2] as APIApplicationCommandInteractionDataStringOption).value;
-                for (let i = interaction.data.options.length - 1; i >= 3; i--) {
-                    const mention = interaction.data.options[i] as APIApplicationCommandInteractionDataMentionableOption;
-                    const rest = new REST({ version: DISCORD_API_VERSION }).setToken(c.env.DISCORD_BOT_TOKEN);
-                    try {
-                        const response = await rest.get(Routes.user(mention.value));
-                        if (typeof response === 'object' && response !== null && 'id' in response) {
-                            name = `<@${response.id}> ` + name;
-                        }
-                    } catch (e) {
-                        name = `<@&${mention.value}> ` + name;
-                    }
-                }
-                const parsedResult = parseStringToDate(date + 'T' + time);
-                if (!parsedResult.success) {
+                const parsedDateResult = parseStringToDate(date + ' ' + time);
+                if (!parsedDateResult.success) {
                     return buildNormalInteractionResponse(c, 'Invalid date format');
                 }
-                await new dbUtil(c.env.DB).createEvent(name, formatDateToString(parsedResult.date));
+                let content = '';
+                const users = [],
+                    roles = [];
+                const db = new dbUtil(c.env.DB);
+                for (const option of interaction.data.options) {
+                    if (option.name === 'content') {
+                        content = (option as APIApplicationCommandInteractionDataStringOption).value;
+                    }
+                    if (option.type === 3) continue;
+                    const mentionId = (option as APIApplicationCommandInteractionDataMentionableOption).value;
+                    if (await db.checkUserExists(mentionId)) {
+                        users.push(mentionId);
+                    } else {
+                        roles.push(mentionId);
+                    }
+                }
+                await new dbUtil(c.env.DB).createEvent(
+                    {
+                        title: title,
+                        content: content,
+                        date: parsedDateResult.date,
+                    } as Event,
+                    c.env.DISCORD_BOT_CHANNEL_ID,
+                    users,
+                    roles,
+                    'normal'
+                );
                 return buildNormalInteractionResponse(c, 'イベントが追加されました');
 
             default:
@@ -152,7 +183,7 @@ const notifyNearEvents = async (env: Bindings) => {
     const events = await db.readEvents();
     const rest = new REST({ version: DISCORD_API_VERSION }).setToken(env.DISCORD_BOT_TOKEN);
     for (const event of events) {
-        const untilEventMinutes = differenceInMinutes(parseISO(event.date), toZonedTime(new Date(), 'Asia/Tokyo'));
+        const untilEventMinutes = differenceInMinutes(event.date, toZonedTime(new Date(), 'Asia/Tokyo'));
         if (ALART_TIMINGS.has(untilEventMinutes + 1)) {
             const button = {
                 type: MessageComponentTypes.BUTTON,
@@ -165,7 +196,7 @@ const notifyNearEvents = async (env: Bindings) => {
             } as Button;
             await rest.post(Routes.channelMessages(env.DISCORD_BOT_CHANNEL_ID), {
                 body: {
-                    content: `${event.name} まであと ${untilEventMinutes + 1} 分です`,
+                    content: `${event.title} まであと ${untilEventMinutes + 1} 分です`,
                     components: [
                         {
                             type: 1,
@@ -178,13 +209,45 @@ const notifyNearEvents = async (env: Bindings) => {
     }
 };
 
+const updateUserTable = async (env: Bindings) => {
+    const rest = new REST({ version: DISCORD_API_VERSION }).setToken(env.DISCORD_BOT_TOKEN);
+    const guildUsers = await rest.get(Routes.guildMembers(env.DISCORD_BOT_GUILD_ID), { query: makeURLSearchParams({ limit: 1000 }) }) as { user: {id: string, global_name: string} }[];
+    const db = new dbUtil(env.DB);
+    for (const user of guildUsers) {
+        if (!(await db.checkUserExists(user.user.id))) {
+            await db.createUser(user.user.id, user.user.global_name);
+        }
+    }
+};
+
+const updateRoleTable = async (env: Bindings) => {
+    const rest = new REST({ version: DISCORD_API_VERSION }).setToken(env.DISCORD_BOT_TOKEN);
+    const guildRoles = await rest.get(Routes.guildRoles(env.DISCORD_BOT_GUILD_ID)) as { id: string; name: string }[]
+    const db = new dbUtil(env.DB);
+    for (const role of guildRoles) {
+        if (!(await db.checkRoleExists(role.id))) {
+            await db.createRole(role.id, role.name);
+        }   
+    }
+};
+
 const addFutureContests = async (env: Bindings) => {
     const db = new dbUtil(env.DB);
     const contests = await getFutureContests();
     for (const contest of contests) {
         const message = buildContestEventMessage(contest);
-        if (!(await db.checkEventExistsByName(message))) {
-            await db.createEvent(message, formatDateToString(contest.time));
+        if (!(await db.checkEventExistsByTitle(message))) {
+            await db.createEvent(
+                {
+                    title: message,
+                    content: '',
+                    date: contest.time,
+                } as Event,
+                env.DISCORD_BOT_CHANNEL_ID,
+                [],
+                [],
+                'once',
+            );
         }
     }
 };

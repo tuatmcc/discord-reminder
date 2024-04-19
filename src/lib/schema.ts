@@ -12,7 +12,7 @@ export const events = sqliteTable('events', {
 });
 
 export const mention_users = sqliteTable('mention_users', {
-    event_id: text('event_id')
+    event_id: integer('event_id')
         .primaryKey()
         .references(() => events.id),
     user_id: text('user_id')
@@ -21,7 +21,7 @@ export const mention_users = sqliteTable('mention_users', {
 });
 
 export const mention_roles = sqliteTable('mention_roles', {
-    event_id: text('event_id')
+    event_id: integer('event_id')
         .primaryKey()
         .references(() => events.id),
     role_id: text('role_id')

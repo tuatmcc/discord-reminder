@@ -1,7 +1,8 @@
 import { jsx } from 'hono/jsx';
-import { Event } from './types/event';
+import { Event, FullEvent } from './types/event';
+import { formatDateToString } from './lib/date';
 
-export const Reminder = (props: { events: Event[] }) => {
+export const Reminder = (props: { events: FullEvent[] }) => {
     return (
         <html lang="ja">
             <Header />
@@ -19,7 +20,7 @@ export const Reminder = (props: { events: Event[] }) => {
     );
 };
 
-export const ReminderAdmin = (props: { events: Event[] }) => {
+export const ReminderAdmin = (props: { events: FullEvent[] }) => {
     return (
         <html lang="ja">
             <Header />
@@ -103,7 +104,7 @@ const FormRegisterEvent = () => {
     );
 };
 
-const Events = (props: { events: Event[]; admin: boolean }) => {
+const Events = (props: { events: FullEvent[]; admin: boolean }) => {
     return (
         <div class="card">
             <div class="card-body">
@@ -120,8 +121,8 @@ const Events = (props: { events: Event[]; admin: boolean }) => {
                     <tbody>
                         {props.events.map((event) => (
                             <tr>
-                                <td>{event.date}</td>
-                                <td dangerouslySetInnerHTML={{ __html: event.name }}></td>
+                                <td>{formatDateToString(event.date)}</td>
+                                <td dangerouslySetInnerHTML={{ __html: event.title }}></td>
                                 {props.admin && (
                                     <td>
                                         <form action="auth/delete_event" method="post">
