@@ -7,7 +7,8 @@ export const Reminder = (props: { events: Event[] }) => {
             <Header />
             <body>
                 <div class="container my-5">
-                    <h1 class="mb-4">リマインダー管理</h1>
+                    <h1 class="mb-4">リマインダー一覧</h1>
+                    <a href="auth"> 管理画面 </a>
                     <Events events={props.events} admin={false} />
                 </div>
                 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
@@ -53,7 +54,7 @@ const FormRegisterEvent = () => {
         <div class="card mb-4">
             <div class="card-body">
                 <h2 class="card-title mb-4">新しいイベントを追加</h2>
-                <form action="add_event" method="post">
+                <form action="auth/add_event" method="post">
                     <div class="form-group">
                         <label for="date">日付</label>
                         <div class="input-group">
@@ -123,7 +124,7 @@ const Events = (props: { events: Event[]; admin: boolean }) => {
                                 <td>{event.name}</td>
                                 {props.admin && (
                                     <td>
-                                        <form action="delete_event" method="post">
+                                        <form action="auth/delete_event" method="post">
                                             <input type="submit" class="btn btn-danger" value="削除" />
                                             <input type="hidden" name="id" value={event.id} />
                                         </form>
