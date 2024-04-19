@@ -1,14 +1,14 @@
 import { jsx } from 'hono/jsx';
 import { Event } from './types/event';
 
-export const Reminder = (props: {events: Event[]}) => {
+export const Reminder = (props: { events: Event[] }) => {
     return (
         <html lang="ja">
             <Header />
             <body>
                 <div class="container my-5">
                     <h1 class="mb-4">リマインダー管理</h1>
-                    <Events events={props.events} admin={false}/>
+                    <Events events={props.events} admin={false} />
                 </div>
                 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
                 <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
@@ -18,7 +18,7 @@ export const Reminder = (props: {events: Event[]}) => {
     );
 };
 
-export const ReminderAdmin = (props: {events: Event[]}) => {
+export const ReminderAdmin = (props: { events: Event[] }) => {
     return (
         <html lang="ja">
             <Header />
@@ -46,7 +46,7 @@ const Header = () => {
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css"></link>
         </head>
     );
-}
+};
 
 const FormRegisterEvent = () => {
     return (
@@ -102,7 +102,7 @@ const FormRegisterEvent = () => {
     );
 };
 
-const Events = (props: {events: Event[], admin: boolean}) => {
+const Events = (props: { events: Event[]; admin: boolean }) => {
     return (
         <div class="card">
             <div class="card-body">
@@ -113,9 +113,7 @@ const Events = (props: {events: Event[], admin: boolean}) => {
                         <tr>
                             <th>日時</th>
                             <th>イベント名</th>
-                            {props.admin &&
-                            <th>削除</th>
-                            }
+                            {props.admin && <th>削除</th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -123,14 +121,14 @@ const Events = (props: {events: Event[], admin: boolean}) => {
                             <tr>
                                 <td>{event.date}</td>
                                 <td>{event.name}</td>
-                                {props.admin &&
-                                <td>
-                                    <form action="delete_event" method="post">
-                                        <input type="submit" class="btn btn-danger" value="削除" />
-                                    <input type="hidden" name="id" value={event.id} />
-                                    </form>
-                                </td>
-                                }
+                                {props.admin && (
+                                    <td>
+                                        <form action="delete_event" method="post">
+                                            <input type="submit" class="btn btn-danger" value="削除" />
+                                            <input type="hidden" name="id" value={event.id} />
+                                        </form>
+                                    </td>
+                                )}
                             </tr>
                         ))}
                     </tbody>
