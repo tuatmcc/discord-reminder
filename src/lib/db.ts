@@ -33,7 +33,13 @@ export class dbUtil {
     constructor(db: D1Database) {
         this.db = drizzle(db);
     }
-    async createEvent(event: Event, channelId: string, mentionUsers: string[] = [], mentionRoles: string[] = [], notifyType: NotifyType = 'normal' as NotifyType) {
+    async createEvent(
+        event: Event,
+        channelId: string,
+        mentionUsers: string[] = [],
+        mentionRoles: string[] = [],
+        notifyType: NotifyType = 'normal' as NotifyType,
+    ) {
         const result = await this.db
             .insert(events)
             .values({
@@ -44,9 +50,9 @@ export class dbUtil {
                 channel_id: channelId,
             })
             .run();
-        if(result.success && typeof result.results[0] !== null){
+        if (result.success && typeof result.results[0] !== null) {
             const insertedEvent = result.results[0] as Record<keyof DBEvent, unknown>;
-            if(typeof insertedEvent.id === 'number'){
+            if (typeof insertedEvent.id === 'number') {
                 for (const mentionUser of mentionUsers) {
                     await this.db.insert(mention_users).values({ event_id: insertedEvent.id, user_id: mentionUser }).run();
                 }

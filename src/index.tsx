@@ -165,7 +165,7 @@ app.post('/', async (c) => {
                     c.env.DISCORD_BOT_CHANNEL_ID,
                     users,
                     roles,
-                    'normal'
+                    'normal',
                 );
                 return buildNormalInteractionResponse(c, 'イベントが追加されました');
 
@@ -211,7 +211,9 @@ const notifyNearEvents = async (env: Bindings) => {
 
 const updateUserTable = async (env: Bindings) => {
     const rest = new REST({ version: DISCORD_API_VERSION }).setToken(env.DISCORD_BOT_TOKEN);
-    const guildUsers = await rest.get(Routes.guildMembers(env.DISCORD_BOT_GUILD_ID), { query: makeURLSearchParams({ limit: 1000 }) }) as { user: {id: string, global_name: string} }[];
+    const guildUsers = (await rest.get(Routes.guildMembers(env.DISCORD_BOT_GUILD_ID), { query: makeURLSearchParams({ limit: 1000 }) })) as {
+        user: { id: string; global_name: string };
+    }[];
     const db = new dbUtil(env.DB);
     for (const user of guildUsers) {
         if (!(await db.checkUserExists(user.user.id))) {
@@ -222,12 +224,12 @@ const updateUserTable = async (env: Bindings) => {
 
 const updateRoleTable = async (env: Bindings) => {
     const rest = new REST({ version: DISCORD_API_VERSION }).setToken(env.DISCORD_BOT_TOKEN);
-    const guildRoles = await rest.get(Routes.guildRoles(env.DISCORD_BOT_GUILD_ID)) as { id: string; name: string }[]
+    const guildRoles = (await rest.get(Routes.guildRoles(env.DISCORD_BOT_GUILD_ID))) as { id: string; name: string }[];
     const db = new dbUtil(env.DB);
     for (const role of guildRoles) {
         if (!(await db.checkRoleExists(role.id))) {
             await db.createRole(role.id, role.name);
-        }   
+        }
     }
 };
 
