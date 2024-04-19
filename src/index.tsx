@@ -14,13 +14,13 @@ import { Bindings } from './bindings';
 import { EVENTS_COMMAND, ADD_COMMAND } from './commands';
 import { differenceInMinutes, parseISO } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import { dbUtil } from './db';
-import { parseStringToDate, formatDateToString } from './util';
-import { buildContestEventMessage, buildDisplayEventsMessage } from './buildMessages';
-import { authenticateRequest, buildNormalInteractionResponse } from './discord';
+import { dbUtil } from './lib/db';
+import { parseStringToDate, formatDateToString } from './lib/util';
+import { buildContestEventMessage, buildDisplayEventsMessage } from './lib/date';
+import { authenticateRequest, buildNormalInteractionResponse } from './lib/discord';
 import { REST } from '@discordjs/rest';
 import { Reminder } from './components';
-import { getFutureContests } from './crawler';
+import { getFutureContests } from './lib/crawler';
 
 // 何分前に通知するか
 const ALART_TIMINGS = new Set([5, 10, 15, 30, 60]);

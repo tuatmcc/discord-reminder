@@ -1,14 +1,8 @@
 import { load } from 'cheerio';
 import { ParseOptions, parse } from 'date-fns';
+import { Contest } from '../types/contest';
 
 const ATCODER_CONTESTS_URL = 'https://atcoder.jp/contests/';
-
-export type Contest = {
-    id: string;
-    name: string;
-    url: string;
-    time: Date;
-};
 
 export async function getFutureContests() {
     let contests: Contest[] = [];
@@ -26,9 +20,3 @@ export async function getFutureContests() {
     }
     return contests;
 }
-
-getFutureContests().then((contests) => {
-    for (const contest of contests) {
-        console.log(contest);
-    }
-});

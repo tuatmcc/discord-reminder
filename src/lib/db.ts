@@ -2,12 +2,6 @@ import { DrizzleD1Database, drizzle } from 'drizzle-orm/d1';
 import { events } from './schema';
 import { eq } from 'drizzle-orm';
 
-export type Event = {
-    name: string;
-    date: string;
-    id: number;
-};
-
 export class dbUtil {
     db: DrizzleD1Database;
     constructor(db: D1Database) {

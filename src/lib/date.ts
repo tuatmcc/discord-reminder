@@ -1,6 +1,5 @@
-import { Contest } from './crawler';
-import { Event } from './db';
-import { formatDateToDisplayString } from './util';
+import { Event } from '../types/event';
+import { Contest } from '../types/contest';
 
 export const buildDisplayEventsMessage = (events: Event[]) => {
     let message = '';

@@ -1,5 +1,5 @@
-import { getApplicationId } from './util';
-import { COMMANDS } from './commands';
+import { getApplicationId } from '../lib/discord';
+import { COMMANDS } from '../commands';
 import fetch from 'node-fetch';
 
 const token = process.env.DISCORD_BOT_TOKEN;
