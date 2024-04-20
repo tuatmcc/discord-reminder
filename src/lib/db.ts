@@ -43,8 +43,8 @@ export class dbUtil {
     async createEvent(
         event: Event,
         channelId: string,
-        mentionUsers: string[] = [],
-        mentionRoles: string[] = [],
+        mentionUserIds: string[] = [],
+        mentionRoleIds: string[] = [],
         notifyType: NotifyType = 'normal' as NotifyType,
     ) {
         let id = 0;
@@ -63,13 +63,18 @@ export class dbUtil {
                 channel_id: channelId,
             })
             .run();
+
         if (result.success) {
-            for (const mentionUser of mentionUsers) {
-                await this.db.insert(mention_users).values({ event_id: id, user_id: mentionUser }).run();
-            }
-            for (const mentionRole of mentionRoles) {
-                await this.db.insert(mention_roles).values({ event_id: id, role_id: mentionRole }).run();
-            }
+            if (mentionUserIds.length > 0)
+                await this.db
+                    .insert(mention_users)
+                    .values(mentionUserIds.map((userId) => ({ event_id: id, user_id: userId })))
+                    .run();
+            if (mentionRoleIds.length > 0)
+                await this.db
+                    .insert(mention_roles)
+                    .values(mentionRoleIds.map((roleId) => ({ event_id: id, role_id: roleId })))
+                    .run();
         }
     }
     async createRole(id: string, name: string) {
@@ -84,11 +89,25 @@ export class dbUtil {
     async readEvents() {
         return (await this.db.select().from(events).all()).map((event) => castEventFromDBToFullEvent(event));
     }
+    async readUsers() {
+        return await this.db.select().from(users).all();
+    }
+    async readRoles() {
+        return await this.db.select().from(roles).all();
+    }
+    async readMentionUsers() {
+        return await this.db.select().from(mention_users).all();
+    }
+    async readMentionRoles() {
+        return await this.db.select().from(mention_roles).all();
+    }
     async deleteEvent(id: number) {
-        await this.db.delete(mention_users).where(eq(mention_users.event_id, id)).run();
-        await this.db.delete(mention_roles).where(eq(mention_roles.event_id, id)).run();
-        const deletedEvent = (await this.db.delete(events).where(eq(events.id, id)).returning())[0];
-        return deletedEvent;
+        const [deletedMentionUsers, deletedMentionRoles, deletedEvent] = await Promise.all([
+            this.db.delete(mention_users).where(eq(mention_users.event_id, id)).run(),
+            this.db.delete(mention_roles).where(eq(mention_roles.event_id, id)).run(),
+            this.db.delete(events).where(eq(events.id, id)).returning(),
+        ]);
+        return deletedEvent[0];
     }
     async checkUserExists(id: string) {
         return (await this.db.select().from(users).where(eq(users.id, id)).all()).length > 0;

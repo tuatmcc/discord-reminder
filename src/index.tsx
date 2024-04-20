@@ -16,7 +16,7 @@ import { differenceInMinutes, parseISO } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { dbUtil } from './lib/db';
 import { parseStringToDate, formatDateToString } from './lib/date';
-import { buildContestEventMessage, buildDisplayEventsMessage } from './lib/message';
+import { buildContestEventMessage, buildDisplayEventsMessage, buildDisplayEventsMessageWithMentionables } from './lib/message';
 import { authenticateRequest, buildNormalInteractionResponse } from './lib/discord';
 import { REST, makeURLSearchParams } from '@discordjs/rest';
 import { Reminder, ReminderAdmin } from './components';
@@ -51,6 +51,8 @@ app.get('/', async (c) => {
 
 app.get('/update', async (c) => {
     await updateChannelTable(c.env);
+    await updateRoleTable(c.env);
+    await updateUserTable(c.env);
     return c.redirect('/');
 });
 
@@ -122,11 +124,16 @@ app.post('/', async (c) => {
     }
 
     if (interaction.type == InteractionType.ApplicationCommand && interaction.data.type === ApplicationCommandType.ChatInput) {
+        const db = new dbUtil(c.env.DB);
         switch (interaction.data.name) {
-            case EVENTS_COMMAND.name:
-                const events = await new dbUtil(c.env.DB).readEvents();
-                return buildNormalInteractionResponse(c, buildDisplayEventsMessage(events));
-
+            case EVENTS_COMMAND.name: {
+                const [events, mention_roles, mention_users] = await Promise.all([
+                    db.readEvents(),
+                    db.readMentionRoles(),
+                    db.readMentionUsers(),
+                ]);
+                return buildNormalInteractionResponse(c, buildDisplayEventsMessageWithMentionables(events, mention_users, mention_roles));
+            }
             case ADD_COMMAND.name:
                 if (interaction.data.options === undefined) {
                     return buildNormalInteractionResponse(c, 'Invalid command');
@@ -141,16 +148,16 @@ app.post('/', async (c) => {
                 let content = '';
                 const users = [],
                     roles = [];
-                const db = new dbUtil(c.env.DB);
+                const [dbUsers, dbRoles] = await Promise.all([db.readUsers(), db.readRoles()]);
                 for (const option of interaction.data.options) {
                     if (option.name === 'content') {
                         content = (option as APIApplicationCommandInteractionDataStringOption).value;
                     }
                     if (option.type === 3) continue;
                     const mentionId = (option as APIApplicationCommandInteractionDataMentionableOption).value;
-                    if (await db.checkUserExists(mentionId)) {
+                    if (dbUsers.find((user) => user.id === mentionId)) {
                         users.push(mentionId);
-                    } else {
+                    } else if (dbRoles.find((role) => role.id === mentionId)) {
                         roles.push(mentionId);
                     }
                 }
