@@ -12,13 +12,13 @@ import {
 import { Button, ButtonStyleTypes, MessageComponentTypes } from 'discord-interactions';
 import { Bindings } from './bindings';
 import { EVENTS_COMMAND, ADD_COMMAND } from './commands';
-import { differenceInMinutes, parseISO } from 'date-fns';
+import { differenceInMinutes } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import { DBWrapper } from './lib/db';
-import { parseStringToDate, formatDateToString } from './lib/date';
-import { buildContestEventMessage, buildDisplayEventsMessage, buildDisplayEventsMessageWithMentionables } from './lib/message';
-import { authenticateRequest, buildNormalInteractionResponse } from './lib/discord';
-import { REST, makeURLSearchParams } from '@discordjs/rest';
+import { parseStringToDate } from './lib/date';
+import { buildContestEventMessage, buildDisplayEventsMessageWithMentionables, buildMentionHeader } from './lib/message';
+import { RESTAPIWrapper, authenticateRequest, buildNormalInteractionResponse } from './lib/discord';
+import { REST } from '@discordjs/rest';
 import { Reminder, ReminderAdmin } from './components';
 import { getFutureContests } from './lib/crawler';
 import { basicAuth } from 'hono/basic-auth';
@@ -27,7 +27,6 @@ import { Event } from './types/event';
 
 // 何分前に通知するか
 const ALART_TIMINGS = new Set([5, 10, 15, 30, 60]);
-const DISCORD_API_VERSION = '10';
 
 const admin = new Hono<{ Bindings: Bindings }>();
 
@@ -74,6 +73,16 @@ admin.post('/delete', async (c) => {
     const db = new DBWrapper(c.env.DB);
     const id = (await c.req.parseBody())['id'];
     if (typeof id === 'string' && (await db.checkEventExists(parseInt(id)))) await db.deleteEvent(parseInt(id));
+    return c.redirect('/admin');
+});
+
+admin.get('/update', async (c) => {
+    await Promise.all([updateUserTable(c.env), updateRoleTable(c.env), updateChannelTable(c.env)]);
+    return c.redirect('/admin');
+});
+
+admin.get('/update/contests', async (c) => {
+    await addFutureContests(c.env);
     return c.redirect('/admin');
 });
 
@@ -141,13 +150,17 @@ app.post('/', async (c) => {
                 if (!parsedDateResult.success) {
                     return buildNormalInteractionResponse(c, 'Invalid date format');
                 }
-                let content = '';
+                let content = '',
+                    notifyType = 'normal';
                 const users = [],
                     roles = [];
                 const [dbUsers, dbRoles] = await Promise.all([db.readUsers(), db.readRoles()]);
                 for (const option of interaction.data.options) {
                     if (option.name === 'content') {
                         content = (option as APIApplicationCommandInteractionDataStringOption).value;
+                    }
+                    if (option.name === 'notifytype') {
+                        notifyType = (option as APIApplicationCommandInteractionDataStringOption).value;
                     }
                     if (option.type === 3) continue;
                     const mentionId = (option as APIApplicationCommandInteractionDataMentionableOption).value;
@@ -156,6 +169,9 @@ app.post('/', async (c) => {
                     } else if (dbRoles.find((role) => role.id === mentionId)) {
                         roles.push(mentionId);
                     }
+                }
+                if (notifyType !== 'once' && notifyType !== 'normal') {
+                    return buildNormalInteractionResponse(c, 'Invalid notifyType');
                 }
                 await new DBWrapper(c.env.DB).createEvent(
                     {
@@ -166,7 +182,7 @@ app.post('/', async (c) => {
                     c.env.DISCORD_BOT_CHANNEL_ID,
                     users,
                     roles,
-                    'normal',
+                    notifyType,
                 );
                 return buildNormalInteractionResponse(c, 'イベントが追加されました');
 
@@ -181,72 +197,59 @@ app.post('/', async (c) => {
 
 const notifyNearEvents = async (env: Bindings) => {
     const db = new DBWrapper(env.DB);
+    const rest = new RESTAPIWrapper(env.DISCORD_BOT_TOKEN);
     const events = await db.readEvents();
-    const rest = new REST({ version: DISCORD_API_VERSION }).setToken(env.DISCORD_BOT_TOKEN);
     for (const event of events) {
         const untilEventMinutes = differenceInMinutes(event.date, toZonedTime(new Date(), 'Asia/Tokyo'));
-        if (ALART_TIMINGS.has(untilEventMinutes + 1)) {
-            const button = {
-                type: MessageComponentTypes.BUTTON,
-                style: ButtonStyleTypes.DANGER,
-                label: '削除する',
-                custom_id: `delete-${event.id}`,
-                emoji: {
-                    name: '🗑',
-                },
-            } as Button;
-            await rest.post(Routes.channelMessages(env.DISCORD_BOT_CHANNEL_ID), {
-                body: {
-                    content: `${event.title} まであと ${untilEventMinutes + 1} 分です`,
-                    components: [
-                        {
-                            type: 1,
-                            components: [button],
-                        },
-                    ],
-                },
-            });
+        if (untilEventMinutes <= 0) {
+            await db.deleteEvent(event.id);
+            continue;
+        }
+        switch (event.notify_type) {
+            case 'once':
+                if (untilEventMinutes + 1 <= 60) {
+                    const [roles, users] = await Promise.all([
+                        db.readRolesMentionedInEvent(event.id),
+                        db.readUsersMentionedInEvent(event.id),
+                    ]);
+                    await rest.postMessageWithDeleteButton(
+                        env.DISCORD_BOT_CHANNEL_ID,
+                        buildMentionHeader(roles, users) + `${event.title} まであと ${untilEventMinutes + 1} 分です`,
+                        `delete-${event.id}`,
+                    );
+                    await db.deleteEvent(event.id);
+                }
+                break;
+            case 'normal':
+                if (ALART_TIMINGS.has(untilEventMinutes + 1)) {
+                    const [roles, users] = await Promise.all([
+                        db.readRolesMentionedInEvent(event.id),
+                        db.readUsersMentionedInEvent(event.id),
+                    ]);
+                    await rest.postMessageWithDeleteButton(
+                        env.DISCORD_BOT_CHANNEL_ID,
+                        buildMentionHeader(roles, users) + `${event.title} まであと ${untilEventMinutes + 1} 分です`,
+                        `delete-${event.id}`,
+                    );
+                }
+                break;
         }
     }
 };
 
 const updateUserTable = async (env: Bindings) => {
-    const rest = new REST({ version: DISCORD_API_VERSION }).setToken(env.DISCORD_BOT_TOKEN);
-    const guildUsers = (await rest.get(Routes.guildMembers(env.DISCORD_BOT_GUILD_ID), { query: makeURLSearchParams({ limit: 1000 }) })) as {
-        user: { id: string; username: string; global_name: string };
-    }[];
-    const db = new DBWrapper(env.DB);
-    for (const user of guildUsers) {
-        if (!(await db.checkUserExists(user.user.id))) {
-            if (user.user.global_name === null) {
-                await db.createUser(user.user.id, user.user.username);
-            } else {
-                await db.createUser(user.user.id, user.user.global_name);
-            }
-        }
-    }
+    const guildUsers = await new RESTAPIWrapper(env.DISCORD_BOT_TOKEN).getGuildMembers(env.DISCORD_BOT_GUILD_ID);
+    new DBWrapper(env.DB).createUsers(guildUsers);
 };
 
 const updateRoleTable = async (env: Bindings) => {
-    const rest = new REST({ version: DISCORD_API_VERSION }).setToken(env.DISCORD_BOT_TOKEN);
-    const guildRoles = (await rest.get(Routes.guildRoles(env.DISCORD_BOT_GUILD_ID))) as { id: string; name: string }[];
-    const db = new DBWrapper(env.DB);
-    for (const role of guildRoles) {
-        if (!(await db.checkRoleExists(role.id))) {
-            await db.createRole(role.id, role.name);
-        }
-    }
+    const guildRoles = await new RESTAPIWrapper(env.DISCORD_BOT_TOKEN).getGuildRoles(env.DISCORD_BOT_GUILD_ID);
+    new DBWrapper(env.DB).createRoles(guildRoles);
 };
 
 const updateChannelTable = async (env: Bindings) => {
-    const rest = new REST({ version: DISCORD_API_VERSION }).setToken(env.DISCORD_BOT_TOKEN);
-    const guildChannels = (await rest.get(Routes.guildChannels(env.DISCORD_BOT_GUILD_ID))) as { id: string; name: string }[];
-    const db = new DBWrapper(env.DB);
-    for (const channel of guildChannels) {
-        if (!(await db.checkChannelExists(channel.id))) {
-            await db.createChannel(channel.id, channel.name);
-        }
-    }
+    const guildChannels = await new RESTAPIWrapper(env.DISCORD_BOT_TOKEN).getGuildChannels(env.DISCORD_BOT_GUILD_ID);
+    new DBWrapper(env.DB).createChannels(guildChannels);
 };
 
 const addFutureContests = async (env: Bindings) => {
@@ -263,7 +266,7 @@ const addFutureContests = async (env: Bindings) => {
                 } as Event,
                 env.DISCORD_BOT_CHANNEL_ID,
                 [],
-                [],
+                [env.DISCORD_KYOPRO_ROLE_ID],
                 'once',
             );
         }

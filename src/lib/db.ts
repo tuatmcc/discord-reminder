@@ -1,9 +1,14 @@
 import { DrizzleD1Database, drizzle } from 'drizzle-orm/d1';
-import { events, users, roles, channels, mention_roles, mention_users } from './schema';
 import { eq } from 'drizzle-orm';
+
+import { formatDateToString, parseStringToDate } from './date';
+import { events, users, roles, channels, mention_roles, mention_users } from './schema';
+
+import { Role } from '../types/role';
+import { User } from '../types/user';
+import { Channel } from '../types/channel';
 import { Event, FullEvent } from '../types/event';
 import { NotifyType } from '../types/notifyType';
-import { formatDateToString, parseStringToDate } from './date';
 
 export type DBEvent = {
     id: number;
@@ -36,6 +41,7 @@ function getRandomInt(min: number, max: number) {
 }
 
 export class DBWrapper {
+    private step = 20;
     db: DrizzleD1Database;
     constructor(db: D1Database) {
         this.db = drizzle(db);
@@ -77,22 +83,52 @@ export class DBWrapper {
                     .run();
         }
     }
-    async createRole(id: string, name: string) {
-        return this.db.insert(roles).values({ id: id, name: name }).run();
+    async createRoles(newRoles: Role[]) {
+        const promises: Promise<D1Result<unknown>>[] = [];
+        for (let i = 0; i < newRoles.length; i += this.step) {
+            promises.push(
+                this.db
+                    .insert(roles)
+                    .values(newRoles.slice(i, i + this.step))
+                    .onConflictDoNothing()
+                    .run(),
+            );
+        }
+        Promise.all(promises);
     }
-    async createUser(id: string, name: string) {
-        return this.db.insert(users).values({ id: id, name: name }).run();
+    async createUsers(newUsers: User[]) {
+        const promises: Promise<D1Result<unknown>>[] = [];
+        for (let i = 0; i < newUsers.length; i += this.step) {
+            promises.push(
+                this.db
+                    .insert(users)
+                    .values(newUsers.slice(i, i + this.step))
+                    .onConflictDoNothing()
+                    .run(),
+            );
+        }
     }
-    async createChannel(id: string, name: string) {
-        return this.db.insert(channels).values({ id: id, name: name }).run();
+    async createChannels(newChannels: Channel[]) {
+        const promises: Promise<D1Result<unknown>>[] = [];
+        for (let i = 0; i < newChannels.length; i += this.step) {
+            promises.push(
+                this.db
+                    .insert(channels)
+                    .values(newChannels.slice(i, i + this.step))
+                    .onConflictDoNothing()
+                    .run(),
+            );
+        }
     }
     async readEvents() {
-        return (await this.db.select().from(events).all()).map((event) => castEventFromDBToFullEvent(event));
+        const ret = (await this.db.select().from(events).all()).map((event) => castEventFromDBToFullEvent(event));
+        ret.sort((a, b) => a.date.getTime() - b.date.getTime());
+        return ret;
     }
-    async readUsers() {
+    async readUsers(): Promise<User[]> {
         return await this.db.select().from(users).all();
     }
-    async readRoles() {
+    async readRoles(): Promise<Role[]> {
         return await this.db.select().from(roles).all();
     }
     async readMentionUsers() {
@@ -100,6 +136,16 @@ export class DBWrapper {
     }
     async readMentionRoles() {
         return await this.db.select().from(mention_roles).all();
+    }
+    async readUsersMentionedInEvent(eventId: number): Promise<string[]> {
+        return (await this.db.select().from(mention_users).where(eq(mention_users.event_id, eventId)).all()).map(
+            (mentionUser) => mentionUser.user_id,
+        );
+    }
+    async readRolesMentionedInEvent(eventId: number): Promise<string[]> {
+        return (await this.db.select().from(mention_roles).where(eq(mention_roles.event_id, eventId)).all()).map(
+            (mentionUser) => mentionUser.role_id,
+        );
     }
     async deleteEvent(id: number) {
         const [deletedMentionUsers, deletedMentionRoles, deletedEvent] = await Promise.all([
@@ -109,19 +155,19 @@ export class DBWrapper {
         ]);
         return deletedEvent[0];
     }
-    async checkUserExists(id: string) {
+    async checkUserExists(id: string): Promise<boolean> {
         return (await this.db.select().from(users).where(eq(users.id, id)).all()).length > 0;
     }
-    async checkRoleExists(id: string) {
+    async checkRoleExists(id: string): Promise<boolean> {
         return (await this.db.select().from(roles).where(eq(roles.id, id)).all()).length > 0;
     }
-    async checkChannelExists(id: string) {
+    async checkChannelExists(id: string): Promise<boolean> {
         return (await this.db.select().from(channels).where(eq(channels.id, id)).all()).length > 0;
     }
-    async checkEventExists(id: number) {
+    async checkEventExists(id: number): Promise<boolean> {
         return (await this.db.select().from(events).where(eq(events.id, id)).all()).length > 0;
     }
-    async checkEventExistsByTitle(title: string) {
+    async checkEventExistsByTitle(title: string): Promise<boolean> {
         return (await this.db.select().from(events).where(eq(events.title, title)).all()).length > 0;
     }
 }

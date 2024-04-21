@@ -67,6 +67,12 @@ export const ADD_COMMAND: RESTPostAPIApplicationCommandsJSONBody = {
             description: 'role or user to mention',
             required: false,
         },
+        {
+            type: ApplicationCommandOptionType.String,
+            name: 'notifytype',
+            description: 'type of notification',
+            required: false,
+        },
     ],
 };
 

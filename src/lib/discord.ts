@@ -1,6 +1,11 @@
 import { Context } from 'hono';
-import { verifyKey } from 'discord-interactions';
-import { APIInteraction, APIInteractionResponse, InteractionResponseType } from 'discord-api-types/v10';
+import { Button, ButtonStyleTypes, MessageComponentTypes, verifyKey } from 'discord-interactions';
+import { APIGuildMember, APIInteraction, APIInteractionResponse, InteractionResponseType, Routes } from 'discord-api-types/v10';
+import { REST, makeURLSearchParams } from '@discordjs/rest';
+
+import { Role } from '../types/role';
+import { User } from '../types/user';
+import { Channel } from '../types/channel';
 
 const BITFIELD_EPHEMERAL = 1 << 6; // EPHEMERAL (see: https://discord.com/developers/docs/resources/channel#message-object-message-flags)
 
@@ -52,3 +57,56 @@ export const buildNormalInteractionResponse = (c: Context, content: string) => {
         },
     });
 };
+
+function buildDeleteButton(custom_id: string): Button {
+    return {
+        type: MessageComponentTypes.BUTTON,
+        style: ButtonStyleTypes.DANGER,
+        label: '削除する',
+        custom_id: custom_id,
+        emoji: {
+            name: '🗑',
+        },
+    } as Button;
+}
+
+export class RESTAPIWrapper {
+    private rest: REST = new REST({ version: '10' });
+    constructor(discordBotToken: string) {
+        this.rest.setToken(discordBotToken);
+    }
+    async getGuildMembers(guildId: string): Promise<User[]> {
+        const apiResponse = (await this.rest.get(Routes.guildMembers(guildId), {
+            query: makeURLSearchParams({ limit: 1000 }),
+        })) as APIGuildMember[];
+        const ret: User[] = [];
+        for (const member of apiResponse) {
+            if (member.user) {
+                ret.push({
+                    id: member.user.id,
+                    name: member.user.username,
+                });
+            }
+        }
+        return ret;
+    }
+    async getGuildRoles(guildId: string): Promise<Role[]> {
+        return (await this.rest.get(Routes.guildRoles(guildId))) as Role[];
+    }
+    async getGuildChannels(guildId: string): Promise<Channel[]> {
+        return (await this.rest.get(Routes.guildChannels(guildId))) as Channel[];
+    }
+    async postMessageWithDeleteButton(channelId: string, content: string, custom_id: string) {
+        this.rest.post(Routes.channelMessages(channelId), {
+            body: {
+                content: content,
+                components: [
+                    {
+                        type: MessageComponentTypes.ACTION_ROW,
+                        components: [buildDeleteButton(custom_id)],
+                    },
+                ],
+            },
+        });
+    }
+}
