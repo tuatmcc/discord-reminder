@@ -9,7 +9,7 @@ export const Reminder = (props: { events: FullEvent[] }) => {
             <body>
                 <div class="container my-5">
                     <h1 class="mb-4">リマインダー一覧</h1>
-                    <a href="auth"> 管理画面 </a>
+                    <a href="admin"> 管理画面 </a>
                     <Events events={props.events} admin={false} />
                 </div>
                 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
@@ -55,7 +55,7 @@ const FormRegisterEvent = () => {
         <div class="card mb-4">
             <div class="card-body">
                 <h2 class="card-title mb-4">新しいイベントを追加</h2>
-                <form action="auth/add_event" method="post">
+                <form action="admin" method="post">
                     <div class="form-group">
                         <label for="date">日付</label>
                         <div class="input-group">
@@ -81,7 +81,7 @@ const FormRegisterEvent = () => {
                     </div>
 
                     <div class="form-group">
-                        <label for="event">イベント内容</label>
+                        <label for="event">イベント名</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
                                 <div class="input-group-text">
@@ -90,8 +90,8 @@ const FormRegisterEvent = () => {
                             </div>
                             <textarea
                                 class="form-control"
-                                name="name"
-                                placeholder="イベント内容"
+                                name="title"
+                                placeholder="イベント名"
                                 required
                                 style="field-sizing: content;"
                             ></textarea>
@@ -125,7 +125,7 @@ const Events = (props: { events: FullEvent[]; admin: boolean }) => {
                                 <td dangerouslySetInnerHTML={{ __html: event.title }}></td>
                                 {props.admin && (
                                     <td>
-                                        <form action="auth/delete_event" method="post">
+                                        <form action="admin/delete" method="post">
                                             <input type="submit" class="btn btn-danger" value="削除" />
                                             <input type="hidden" name="id" value={event.id} />
                                         </form>

@@ -5,7 +5,7 @@ import { Event, FullEvent } from '../types/event';
 import { NotifyType } from '../types/notifyType';
 import { formatDateToString, parseStringToDate } from './date';
 
-type DBEvent = {
+export type DBEvent = {
     id: number;
     title: string;
     content: string;
@@ -35,7 +35,7 @@ function getRandomInt(min: number, max: number) {
     return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
 }
 
-export class dbUtil {
+export class DBWrapper {
     db: DrizzleD1Database;
     constructor(db: D1Database) {
         this.db = drizzle(db);

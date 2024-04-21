@@ -14,7 +14,7 @@ import { Bindings } from './bindings';
 import { EVENTS_COMMAND, ADD_COMMAND } from './commands';
 import { differenceInMinutes, parseISO } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
-import { dbUtil } from './lib/db';
+import { DBWrapper } from './lib/db';
 import { parseStringToDate, formatDateToString } from './lib/date';
 import { buildContestEventMessage, buildDisplayEventsMessage, buildDisplayEventsMessageWithMentionables } from './lib/message';
 import { authenticateRequest, buildNormalInteractionResponse } from './lib/discord';
@@ -29,35 +29,17 @@ import { Event } from './types/event';
 const ALART_TIMINGS = new Set([5, 10, 15, 30, 60]);
 const DISCORD_API_VERSION = '10';
 
-const app = new Hono<{ Bindings: Bindings }>();
+const admin = new Hono<{ Bindings: Bindings }>();
 
-app.all('/auth/*', async (c, next) => {
-    const auth = basicAuth({
+admin.use('/*', async (c, next) => {
+    return basicAuth({
         username: c.env.BASIC_AUTH_USERNAME,
         password: c.env.BASIC_AUTH_PASSWORD,
-    });
-    return auth(c, next);
+    })(c, next);
 });
 
-app.get('/', async (c) => {
-    const db = new dbUtil(c.env.DB);
-    const events = await db.readEvents();
-    for (const event of events) {
-        event.title = await marked(event.title);
-        event.content = await marked(event.content);
-    }
-    return c.html(<Reminder events={events} />);
-});
-
-app.get('/update', async (c) => {
-    await updateChannelTable(c.env);
-    await updateRoleTable(c.env);
-    await updateUserTable(c.env);
-    return c.redirect('/');
-});
-
-app.get('/auth', async (c) => {
-    const db = new dbUtil(c.env.DB);
+admin.get('/', async (c) => {
+    const db = new DBWrapper(c.env.DB);
     const events = await db.readEvents();
     for (const event of events) {
         event.title = await marked(event.title);
@@ -66,32 +48,46 @@ app.get('/auth', async (c) => {
     return c.html(<ReminderAdmin events={events} />);
 });
 
-app.post('/auth/add_event', async (c) => {
-    const db = new dbUtil(c.env.DB);
+admin.post('/', async (c) => {
+    const db = new DBWrapper(c.env.DB);
     const body = await c.req.parseBody();
-    const { title, content, time, date } = body;
-    if (typeof title === 'string' && typeof content === 'string' && typeof time === 'string' && typeof date === 'string') {
+    const { title, time, date } = body;
+    console.log(body);
+    if (typeof title === 'string' && typeof time === 'string' && typeof date === 'string') {
         const dateString = date + ' ' + time;
         const parsedResult = parseStringToDate(dateString);
         if (parsedResult.success) {
             await db.createEvent(
                 {
                     title: title,
-                    content: content,
+                    content: '',
                     date: parsedResult.date,
                 } as Event,
                 c.env.DISCORD_BOT_CHANNEL_ID,
             );
         }
     }
-    return c.redirect('/auth');
+    return c.redirect('/admin');
 });
 
-app.post('/auth/delete_event', async (c) => {
-    const db = new dbUtil(c.env.DB);
+admin.post('/delete', async (c) => {
+    const db = new DBWrapper(c.env.DB);
     const id = (await c.req.parseBody())['id'];
     if (typeof id === 'string' && (await db.checkEventExists(parseInt(id)))) await db.deleteEvent(parseInt(id));
-    return c.redirect('/auth');
+    return c.redirect('/admin');
+});
+
+const app = new Hono<{ Bindings: Bindings }>();
+app.route('/admin', admin);
+
+app.get('/', async (c) => {
+    const db = new DBWrapper(c.env.DB);
+    const events = await db.readEvents();
+    for (const event of events) {
+        event.title = await marked(event.title);
+        event.content = await marked(event.content);
+    }
+    return c.html(<Reminder events={events} />);
 });
 
 app.post('/', async (c) => {
@@ -112,7 +108,7 @@ app.post('/', async (c) => {
         switch (interaction.data.custom_id.substring(0, 6)) {
             case 'delete':
                 const id = parseInt(interaction.data.custom_id.substring(7));
-                const db = new dbUtil(c.env.DB);
+                const db = new DBWrapper(c.env.DB);
                 if (!(await db.checkEventExists(id))) {
                     return buildNormalInteractionResponse(c, 'Event not found');
                 }
@@ -124,7 +120,7 @@ app.post('/', async (c) => {
     }
 
     if (interaction.type == InteractionType.ApplicationCommand && interaction.data.type === ApplicationCommandType.ChatInput) {
-        const db = new dbUtil(c.env.DB);
+        const db = new DBWrapper(c.env.DB);
         switch (interaction.data.name) {
             case EVENTS_COMMAND.name: {
                 const [events, mention_roles, mention_users] = await Promise.all([
@@ -161,7 +157,7 @@ app.post('/', async (c) => {
                         roles.push(mentionId);
                     }
                 }
-                await new dbUtil(c.env.DB).createEvent(
+                await new DBWrapper(c.env.DB).createEvent(
                     {
                         title: title,
                         content: content,
@@ -184,7 +180,7 @@ app.post('/', async (c) => {
 // https://zenn.dev/toraco/articles/55f359cbf94862
 
 const notifyNearEvents = async (env: Bindings) => {
-    const db = new dbUtil(env.DB);
+    const db = new DBWrapper(env.DB);
     const events = await db.readEvents();
     const rest = new REST({ version: DISCORD_API_VERSION }).setToken(env.DISCORD_BOT_TOKEN);
     for (const event of events) {
@@ -219,7 +215,7 @@ const updateUserTable = async (env: Bindings) => {
     const guildUsers = (await rest.get(Routes.guildMembers(env.DISCORD_BOT_GUILD_ID), { query: makeURLSearchParams({ limit: 1000 }) })) as {
         user: { id: string; username: string; global_name: string };
     }[];
-    const db = new dbUtil(env.DB);
+    const db = new DBWrapper(env.DB);
     for (const user of guildUsers) {
         if (!(await db.checkUserExists(user.user.id))) {
             if (user.user.global_name === null) {
@@ -234,7 +230,7 @@ const updateUserTable = async (env: Bindings) => {
 const updateRoleTable = async (env: Bindings) => {
     const rest = new REST({ version: DISCORD_API_VERSION }).setToken(env.DISCORD_BOT_TOKEN);
     const guildRoles = (await rest.get(Routes.guildRoles(env.DISCORD_BOT_GUILD_ID))) as { id: string; name: string }[];
-    const db = new dbUtil(env.DB);
+    const db = new DBWrapper(env.DB);
     for (const role of guildRoles) {
         if (!(await db.checkRoleExists(role.id))) {
             await db.createRole(role.id, role.name);
@@ -245,7 +241,7 @@ const updateRoleTable = async (env: Bindings) => {
 const updateChannelTable = async (env: Bindings) => {
     const rest = new REST({ version: DISCORD_API_VERSION }).setToken(env.DISCORD_BOT_TOKEN);
     const guildChannels = (await rest.get(Routes.guildChannels(env.DISCORD_BOT_GUILD_ID))) as { id: string; name: string }[];
-    const db = new dbUtil(env.DB);
+    const db = new DBWrapper(env.DB);
     for (const channel of guildChannels) {
         if (!(await db.checkChannelExists(channel.id))) {
             await db.createChannel(channel.id, channel.name);
@@ -254,7 +250,7 @@ const updateChannelTable = async (env: Bindings) => {
 };
 
 const addFutureContests = async (env: Bindings) => {
-    const db = new dbUtil(env.DB);
+    const db = new DBWrapper(env.DB);
     const contests = await getFutureContests();
     for (const contest of contests) {
         const message = buildContestEventMessage(contest);
