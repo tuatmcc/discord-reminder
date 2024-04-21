@@ -2,9 +2,6 @@ import { Event } from '../types/event';
 import { Contest } from '../types/contest';
 import { formatDateToString } from './date';
 
-import { Role } from '../types/role';
-import { User } from '../types/user';
-
 export const buildMentionHeader = (roleIds: string[], userIds: string[]) => {
     let ret = roleIds
         .map((id) => `<@&${id}>`)

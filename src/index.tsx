@@ -6,10 +6,9 @@ import {
     InteractionResponseType,
     InteractionType,
     APIApplicationCommandInteractionDataStringOption,
-    Routes,
     APIApplicationCommandInteractionDataMentionableOption,
+    ApplicationCommandOptionType,
 } from 'discord-api-types/v10';
-import { Button, ButtonStyleTypes, MessageComponentTypes } from 'discord-interactions';
 import { Bindings } from './bindings';
 import { EVENTS_COMMAND, ADD_COMMAND } from './commands';
 import { differenceInMinutes } from 'date-fns';
@@ -18,7 +17,6 @@ import { DBWrapper } from './lib/db';
 import { parseStringToDate } from './lib/date';
 import { buildContestEventMessage, buildDisplayEventsMessageWithMentionables, buildMentionHeader } from './lib/message';
 import { RESTAPIWrapper, authenticateRequest, buildNormalInteractionResponse } from './lib/discord';
-import { REST } from '@discordjs/rest';
 import { Reminder, ReminderAdmin } from './components';
 import { getFutureContests } from './lib/crawler';
 import { basicAuth } from 'hono/basic-auth';
@@ -115,7 +113,7 @@ app.post('/', async (c) => {
     if (interaction.type === InteractionType.MessageComponent) {
         // button が押されたときの処理
         switch (interaction.data.custom_id.substring(0, 6)) {
-            case 'delete':
+            case 'delete': {
                 const id = parseInt(interaction.data.custom_id.substring(7));
                 const db = new DBWrapper(c.env.DB);
                 if (!(await db.checkEventExists(id))) {
@@ -123,6 +121,7 @@ app.post('/', async (c) => {
                 }
                 const deletedEvent = await db.deleteEvent(id);
                 return buildNormalInteractionResponse(c, `イベントが削除されました: ${deletedEvent.title}, ${deletedEvent.date}`);
+            }
             default:
                 return buildNormalInteractionResponse(c, 'Invalid interaction');
         }
@@ -139,7 +138,7 @@ app.post('/', async (c) => {
                 ]);
                 return buildNormalInteractionResponse(c, buildDisplayEventsMessageWithMentionables(events, mention_users, mention_roles));
             }
-            case ADD_COMMAND.name:
+            case ADD_COMMAND.name: {
                 if (interaction.data.options === undefined) {
                     return buildNormalInteractionResponse(c, 'Invalid command');
                 }
@@ -162,7 +161,7 @@ app.post('/', async (c) => {
                     if (option.name === 'notifytype') {
                         notifyType = (option as APIApplicationCommandInteractionDataStringOption).value;
                     }
-                    if (option.type === 3) continue;
+                    if (option.type === ApplicationCommandOptionType.String) continue;
                     const mentionId = (option as APIApplicationCommandInteractionDataMentionableOption).value;
                     if (dbUsers.find((user) => user.id === mentionId)) {
                         users.push(mentionId);
@@ -185,7 +184,7 @@ app.post('/', async (c) => {
                     notifyType,
                 );
                 return buildNormalInteractionResponse(c, 'イベントが追加されました');
-
+            }
             default:
                 return buildNormalInteractionResponse(c, 'Invalid command');
         }
@@ -239,17 +238,17 @@ const notifyNearEvents = async (env: Bindings) => {
 
 const updateUserTable = async (env: Bindings) => {
     const guildUsers = await new RESTAPIWrapper(env.DISCORD_BOT_TOKEN).getGuildMembers(env.DISCORD_BOT_GUILD_ID);
-    new DBWrapper(env.DB).createUsers(guildUsers);
+    await new DBWrapper(env.DB).createUsers(guildUsers);
 };
 
 const updateRoleTable = async (env: Bindings) => {
     const guildRoles = await new RESTAPIWrapper(env.DISCORD_BOT_TOKEN).getGuildRoles(env.DISCORD_BOT_GUILD_ID);
-    new DBWrapper(env.DB).createRoles(guildRoles);
+    await new DBWrapper(env.DB).createRoles(guildRoles);
 };
 
 const updateChannelTable = async (env: Bindings) => {
     const guildChannels = await new RESTAPIWrapper(env.DISCORD_BOT_TOKEN).getGuildChannels(env.DISCORD_BOT_GUILD_ID);
-    new DBWrapper(env.DB).createChannels(guildChannels);
+    await new DBWrapper(env.DB).createChannels(guildChannels);
 };
 
 const addFutureContests = async (env: Bindings) => {

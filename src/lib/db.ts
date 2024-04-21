@@ -94,7 +94,7 @@ export class DBWrapper {
                     .run(),
             );
         }
-        Promise.all(promises);
+        await Promise.all(promises);
     }
     async createUsers(newUsers: User[]) {
         const promises: Promise<D1Result<unknown>>[] = [];
@@ -107,6 +107,7 @@ export class DBWrapper {
                     .run(),
             );
         }
+        await Promise.all(promises);
     }
     async createChannels(newChannels: Channel[]) {
         const promises: Promise<D1Result<unknown>>[] = [];
@@ -119,6 +120,7 @@ export class DBWrapper {
                     .run(),
             );
         }
+        await Promise.all(promises);
     }
     async readEvents() {
         const ret = (await this.db.select().from(events).all()).map((event) => castEventFromDBToFullEvent(event));
