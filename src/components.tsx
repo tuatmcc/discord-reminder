@@ -1,14 +1,15 @@
 import { jsx } from 'hono/jsx';
-import { Event } from './types/event';
+import { Event, FullEvent } from './types/event';
+import { formatDateToString } from './lib/date';
 
-export const Reminder = (props: { events: Event[] }) => {
+export const Reminder = (props: { events: FullEvent[] }) => {
     return (
         <html lang="ja">
             <Header />
             <body>
                 <div class="container my-5">
                     <h1 class="mb-4">リマインダー一覧</h1>
-                    <a href="auth"> 管理画面 </a>
+                    <a href="admin"> 管理画面 </a>
                     <Events events={props.events} admin={false} />
                 </div>
                 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
@@ -19,7 +20,7 @@ export const Reminder = (props: { events: Event[] }) => {
     );
 };
 
-export const ReminderAdmin = (props: { events: Event[] }) => {
+export const ReminderAdmin = (props: { events: FullEvent[] }) => {
     return (
         <html lang="ja">
             <Header />
@@ -54,7 +55,7 @@ const FormRegisterEvent = () => {
         <div class="card mb-4">
             <div class="card-body">
                 <h2 class="card-title mb-4">新しいイベントを追加</h2>
-                <form action="auth/add_event" method="post">
+                <form action="admin" method="post">
                     <div class="form-group">
                         <label for="date">日付</label>
                         <div class="input-group">
@@ -80,7 +81,7 @@ const FormRegisterEvent = () => {
                     </div>
 
                     <div class="form-group">
-                        <label for="event">イベント内容</label>
+                        <label for="event">イベント名</label>
                         <div class="input-group">
                             <div class="input-group-prepend">
                                 <div class="input-group-text">
@@ -89,8 +90,8 @@ const FormRegisterEvent = () => {
                             </div>
                             <textarea
                                 class="form-control"
-                                name="name"
-                                placeholder="イベント内容"
+                                name="title"
+                                placeholder="イベント名"
                                 required
                                 style="field-sizing: content;"
                             ></textarea>
@@ -103,7 +104,7 @@ const FormRegisterEvent = () => {
     );
 };
 
-const Events = (props: { events: Event[]; admin: boolean }) => {
+const Events = (props: { events: FullEvent[]; admin: boolean }) => {
     return (
         <div class="card">
             <div class="card-body">
@@ -120,11 +121,11 @@ const Events = (props: { events: Event[]; admin: boolean }) => {
                     <tbody>
                         {props.events.map((event) => (
                             <tr>
-                                <td>{event.date}</td>
-                                <td dangerouslySetInnerHTML={{ __html: event.name }}></td>
+                                <td>{formatDateToString(event.date)}</td>
+                                <td dangerouslySetInnerHTML={{ __html: event.title }}></td>
                                 {props.admin && (
                                     <td>
-                                        <form action="auth/delete_event" method="post">
+                                        <form action="admin/delete" method="post">
                                             <input type="submit" class="btn btn-danger" value="削除" />
                                             <input type="hidden" name="id" value={event.id} />
                                         </form>

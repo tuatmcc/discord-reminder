@@ -4,10 +4,13 @@ import { Contest } from '../types/contest';
 
 const ATCODER_CONTESTS_URL = 'https://atcoder.jp/contests/';
 
-export async function getFutureContests() {
-    let contests: Contest[] = [];
+async function getContestPage(): Promise<string> {
     const response = await fetch(ATCODER_CONTESTS_URL);
-    const html = await response.text();
+    return await response.text();
+}
+
+async function parseContestPage(html: string): Promise<Contest[]> {
+    const contests: Contest[] = [];
     const $ = load(html);
     const futureContestsTableRows = $('#contest-table-upcoming > div > div > table > tbody > tr');
     for (let i = 1; i <= futureContestsTableRows.length; i++) {
@@ -19,4 +22,9 @@ export async function getFutureContests() {
         contests.push({ id: contestId, name: contestName, url: ATCODER_CONTESTS_URL + contestId, time: date } as Contest);
     }
     return contests;
+}
+
+export async function getFutureContests(): Promise<Contest[]> {
+    const html = await getContestPage();
+    return await parseContestPage(html);
 }
