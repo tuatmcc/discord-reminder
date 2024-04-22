@@ -1,5 +1,5 @@
-import { jsx } from 'hono/jsx';
-import { Event, FullEvent } from './types/event';
+import { jsx } from 'hono/jsx'; // eslint-disable-line @typescript-eslint/no-unused-vars
+import { FullEvent } from './types/event';
 import { formatDateToString } from './lib/date';
 
 export const Reminder = (props: { events: FullEvent[] }) => {

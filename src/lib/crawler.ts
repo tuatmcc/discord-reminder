@@ -9,7 +9,7 @@ async function getContestPage(): Promise<string> {
     return await response.text();
 }
 
-async function parseContestPage(html: string): Promise<Contest[]> {
+function parseContestPage(html: string): Contest[] {
     const contests: Contest[] = [];
     const $ = load(html);
     const futureContestsTableRows = $('#contest-table-upcoming > div > div > table > tbody > tr');
@@ -26,5 +26,5 @@ async function parseContestPage(html: string): Promise<Contest[]> {
 
 export async function getFutureContests(): Promise<Contest[]> {
     const html = await getContestPage();
-    return await parseContestPage(html);
+    return parseContestPage(html);
 }

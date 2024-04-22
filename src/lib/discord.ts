@@ -97,7 +97,7 @@ export class RESTAPIWrapper {
         return (await this.rest.get(Routes.guildChannels(guildId))) as Channel[];
     }
     async postMessageWithDeleteButton(channelId: string, content: string, custom_id: string) {
-        this.rest.post(Routes.channelMessages(channelId), {
+        await this.rest.post(Routes.channelMessages(channelId), {
             body: {
                 content: content,
                 components: [
