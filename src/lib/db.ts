@@ -54,9 +54,9 @@ export class DBWrapper {
         notifyType: NotifyType = 'normal' as NotifyType,
     ) {
         let id: number;
-        do{
+        do {
             id = getRandomInt(1, 1000000);
-        }while (await this.checkEventExists(id));
+        } while (await this.checkEventExists(id));
         const result = await this.db
             .insert(events)
             .values({

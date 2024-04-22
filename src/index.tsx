@@ -191,7 +191,6 @@ app.post('/', async (c) => {
     }
 });
 
-
 // 定期実行する処理
 // https://zenn.dev/toraco/articles/55f359cbf94862
 
