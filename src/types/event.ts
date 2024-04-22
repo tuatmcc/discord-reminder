@@ -1,13 +1,10 @@
-import { NotifyType } from './notifyType';
+import { NotifyFrequency } from './notifyFrequency';
 
 export type Event = {
-    id: number;
+    id: string;
     title: string;
     content: string;
     date: Date;
-};
-
-export type FullEvent = Event & {
-    notify_type: NotifyType;
-    channel_id: string;
+    notifyFrequency: NotifyFrequency;
+    channelId: string;
 };

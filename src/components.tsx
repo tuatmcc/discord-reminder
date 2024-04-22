@@ -1,8 +1,8 @@
 import { jsx } from 'hono/jsx'; // eslint-disable-line @typescript-eslint/no-unused-vars
-import { FullEvent } from './types/event';
+import { Event } from './types/event';
 import { formatDateToString } from './lib/date';
 
-export const Reminder = (props: { events: FullEvent[] }) => {
+export const Reminder = (props: { events: Event[] }) => {
     return (
         <html lang="ja">
             <Header />
@@ -20,7 +20,7 @@ export const Reminder = (props: { events: FullEvent[] }) => {
     );
 };
 
-export const ReminderAdmin = (props: { events: FullEvent[] }) => {
+export const ReminderAdmin = (props: { events: Event[] }) => {
     return (
         <html lang="ja">
             <Header />
@@ -104,7 +104,7 @@ const FormRegisterEvent = () => {
     );
 };
 
-const Events = (props: { events: FullEvent[]; admin: boolean }) => {
+const Events = (props: { events: Event[]; admin: boolean }) => {
     return (
         <div class="card">
             <div class="card-body">

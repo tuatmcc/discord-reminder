@@ -1,7 +1,7 @@
-import { sqliteTable, integer, text, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, primaryKey } from 'drizzle-orm/sqlite-core';
 
 export const events = sqliteTable('events', {
-    id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+    id: text('id').primaryKey(),
     title: text('title').notNull(),
     content: text('content').notNull(),
     date: text('date').notNull(),
@@ -14,7 +14,7 @@ export const events = sqliteTable('events', {
 export const mention_users = sqliteTable(
     'mention_users',
     {
-        event_id: integer('event_id')
+        event_id: text('event_id')
             .notNull()
             .references(() => events.id),
         user_id: text('user_id')
@@ -31,7 +31,7 @@ export const mention_users = sqliteTable(
 export const mention_roles = sqliteTable(
     'mention_roles',
     {
-        event_id: integer('event_id')
+        event_id: text('event_id')
             .notNull()
             .references(() => events.id),
         role_id: text('role_id')
