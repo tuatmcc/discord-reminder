@@ -21,7 +21,6 @@ import { Reminder, ReminderAdmin } from './components';
 import { getFutureContests } from './lib/crawler';
 import { basicAuth } from 'hono/basic-auth';
 import { marked } from 'marked';
-import { Event } from './types/event';
 import { v4 as uuid } from 'uuid';
 
 // 何分前に通知するか
