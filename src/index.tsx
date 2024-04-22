@@ -21,7 +21,7 @@ import { Reminder, ReminderAdmin } from './components';
 import { getFutureContests } from './lib/crawler';
 import { basicAuth } from 'hono/basic-auth';
 import { marked } from 'marked';
-import { Event } from './types/event';
+import { v4 as uuid } from 'uuid';
 
 // 何分前に通知するか
 const ALART_TIMINGS = new Set([5, 10, 15, 30, 60]);
@@ -54,14 +54,14 @@ admin.post('/', async (c) => {
         const dateString = date + ' ' + time;
         const parsedResult = parseStringToDate(dateString);
         if (parsedResult.success) {
-            await db.createEvent(
-                {
-                    title: title,
-                    content: '',
-                    date: parsedResult.date,
-                } as Event,
-                c.env.DISCORD_BOT_CHANNEL_ID,
-            );
+            await db.createEvent({
+                id: uuid(),
+                title: title,
+                content: '',
+                date: parsedResult.date,
+                notifyFrequency: 'normal',
+                channelId: c.env.DISCORD_BOT_CHANNEL_ID,
+            });
         }
     }
     return c.redirect('/admin');
@@ -70,7 +70,7 @@ admin.post('/', async (c) => {
 admin.post('/delete', async (c) => {
     const db = new DBWrapper(c.env.DB);
     const id = (await c.req.parseBody())['id'];
-    if (typeof id === 'string' && (await db.checkEventExists(parseInt(id)))) await db.deleteEvent(parseInt(id));
+    if (typeof id === 'string' && (await db.checkEventExists(id))) await db.deleteEvent(id);
     return c.redirect('/admin');
 });
 
@@ -114,7 +114,7 @@ app.post('/', async (c) => {
         // button が押されたときの処理
         switch (interaction.data.custom_id.substring(0, 6)) {
             case 'delete': {
-                const id = parseInt(interaction.data.custom_id.substring(7));
+                const id = interaction.data.custom_id.substring(7);
                 const db = new DBWrapper(c.env.DB);
                 if (!(await db.checkEventExists(id))) {
                     return buildNormalInteractionResponse(c, 'Event not found');
@@ -174,14 +174,15 @@ app.post('/', async (c) => {
                 }
                 await new DBWrapper(c.env.DB).createEvent(
                     {
+                        id: uuid(),
                         title: title,
                         content: content,
                         date: parsedDateResult.date,
-                    } as Event,
-                    c.env.DISCORD_BOT_CHANNEL_ID,
+                        channelId: c.env.DISCORD_BOT_CHANNEL_ID,
+                        notifyFrequency: notifyType,
+                    },
                     users,
                     roles,
-                    notifyType,
                 );
                 return buildNormalInteractionResponse(c, 'イベントが追加されました');
             }
@@ -204,7 +205,7 @@ const notifyNearEvents = async (env: Bindings) => {
             await db.deleteEvent(event.id);
             continue;
         }
-        switch (event.notify_type) {
+        switch (event.notifyFrequency) {
             case 'once':
                 if (untilEventMinutes + 1 <= 60) {
                     const [roles, users] = await Promise.all([
@@ -259,14 +260,15 @@ const addFutureContests = async (env: Bindings) => {
         if (!(await db.checkEventExistsByTitle(message))) {
             await db.createEvent(
                 {
+                    id: uuid(),
                     title: message,
                     content: '',
                     date: contest.time,
-                } as Event,
-                env.DISCORD_BOT_CHANNEL_ID,
+                    channelId: env.DISCORD_BOT_CHANNEL_ID,
+                    notifyFrequency: 'once',
+                },
                 [],
                 [env.DISCORD_KYOPRO_ROLE_ID],
-                'once',
             );
         }
     }

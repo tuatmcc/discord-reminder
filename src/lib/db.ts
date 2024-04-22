@@ -7,11 +7,11 @@ import { events, users, roles, channels, mention_roles, mention_users } from './
 import { Role } from '../types/role';
 import { User } from '../types/user';
 import { Channel } from '../types/channel';
-import { Event, FullEvent } from '../types/event';
-import { NotifyType } from '../types/notifyType';
+import { Event } from '../types/event';
+import { NotifyFrequency } from '../types/notifyFrequency';
 
 export type DBEvent = {
-    id: number;
+    id: string;
     title: string;
     content: string;
     date: string;
@@ -19,26 +19,30 @@ export type DBEvent = {
     channel_id: string;
 };
 
-const castEventFromDBToFullEvent = (dbEvents: DBEvent): FullEvent => {
+const castDBEventToEvent = (dbEvents: DBEvent): Event => {
     const parsedDate = parseStringToDate(dbEvents.date);
     const date = parsedDate.success ? parsedDate.date : new Date();
-    const notifyType = dbEvents.notify_type == 'once' ? ('once' as NotifyType) : ('normal' as NotifyType);
+    const notifyFrequency = dbEvents.notify_type == 'once' ? ('once' as NotifyFrequency) : ('normal' as NotifyFrequency);
     return {
         id: dbEvents.id,
         title: dbEvents.title,
         content: dbEvents.content,
         date: date,
-        notify_type: notifyType,
-        channel_id: dbEvents.channel_id,
+        notifyFrequency: notifyFrequency,
+        channelId: dbEvents.channel_id,
     };
 };
 
-// https://developer.mozilla.org/ja/docs/Web/JavaScript/Reference/Global_Objects/Math/random
-function getRandomInt(min: number, max: number) {
-    min = Math.ceil(min);
-    max = Math.floor(max);
-    return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
-}
+const castEventtoDBEvent = (event: Event): DBEvent => {
+    return {
+        id: event.id,
+        title: event.title,
+        content: event.content,
+        date: formatDateToString(event.date),
+        notify_type: event.notifyFrequency as NotifyFrequency,
+        channel_id: event.channelId,
+    };
+};
 
 export class DBWrapper {
     private step = 20;
@@ -46,39 +50,18 @@ export class DBWrapper {
     constructor(db: D1Database) {
         this.db = drizzle(db);
     }
-    async createEvent(
-        event: Event,
-        channelId: string,
-        mentionUserIds: string[] = [],
-        mentionRoleIds: string[] = [],
-        notifyType: NotifyType = 'normal' as NotifyType,
-    ) {
-        let id: number;
-        do {
-            id = getRandomInt(1, 1000000);
-        } while (await this.checkEventExists(id));
-        const result = await this.db
-            .insert(events)
-            .values({
-                id: id,
-                title: event.title,
-                content: event.content,
-                date: formatDateToString(event.date),
-                notify_type: notifyType,
-                channel_id: channelId,
-            })
-            .run();
-
+    async createEvent(event: Event, mentionUserIds: string[] = [], mentionRoleIds: string[] = []) {
+        const result = await this.db.insert(events).values(castEventtoDBEvent(event)).run();
         if (result.success) {
             if (mentionUserIds.length > 0)
                 await this.db
                     .insert(mention_users)
-                    .values(mentionUserIds.map((userId) => ({ event_id: id, user_id: userId })))
+                    .values(mentionUserIds.map((userId) => ({ event_id: event.id, user_id: userId })))
                     .run();
             if (mentionRoleIds.length > 0)
                 await this.db
                     .insert(mention_roles)
-                    .values(mentionRoleIds.map((roleId) => ({ event_id: id, role_id: roleId })))
+                    .values(mentionRoleIds.map((roleId) => ({ event_id: event.id, role_id: roleId })))
                     .run();
         }
     }
@@ -122,7 +105,7 @@ export class DBWrapper {
         await Promise.all(promises);
     }
     async readEvents() {
-        const ret = (await this.db.select().from(events).all()).map((event) => castEventFromDBToFullEvent(event));
+        const ret = (await this.db.select().from(events).all()).map((event) => castDBEventToEvent(event));
         ret.sort((a, b) => a.date.getTime() - b.date.getTime());
         return ret;
     }
@@ -138,17 +121,17 @@ export class DBWrapper {
     async readMentionRoles() {
         return await this.db.select().from(mention_roles).all();
     }
-    async readUsersMentionedInEvent(eventId: number): Promise<string[]> {
+    async readUsersMentionedInEvent(eventId: string): Promise<string[]> {
         return (await this.db.select().from(mention_users).where(eq(mention_users.event_id, eventId)).all()).map(
             (mentionUser) => mentionUser.user_id,
         );
     }
-    async readRolesMentionedInEvent(eventId: number): Promise<string[]> {
+    async readRolesMentionedInEvent(eventId: string): Promise<string[]> {
         return (await this.db.select().from(mention_roles).where(eq(mention_roles.event_id, eventId)).all()).map(
             (mentionUser) => mentionUser.role_id,
         );
     }
-    async deleteEvent(id: number) {
+    async deleteEvent(id: string) {
         const [, , deletedEvent] = await Promise.all([
             this.db.delete(mention_users).where(eq(mention_users.event_id, id)).run(),
             this.db.delete(mention_roles).where(eq(mention_roles.event_id, id)).run(),
@@ -165,7 +148,7 @@ export class DBWrapper {
     async checkChannelExists(id: string): Promise<boolean> {
         return (await this.db.select().from(channels).where(eq(channels.id, id)).all()).length > 0;
     }
-    async checkEventExists(id: number): Promise<boolean> {
+    async checkEventExists(id: string): Promise<boolean> {
         return (await this.db.select().from(events).where(eq(events.id, id)).all()).length > 0;
     }
     async checkEventExistsByTitle(title: string): Promise<boolean> {

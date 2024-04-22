@@ -23,11 +23,11 @@ export const buildDisplayEventsMessage = (events: Event[]) => {
 
 export const buildDisplayEventsMessageWithMentionables = (
     events: Event[],
-    mentionUsers: { event_id: number; user_id: string }[],
-    mentionRoles: { event_id: number; role_id: string }[],
+    mentionUsers: { event_id: string; user_id: string }[],
+    mentionRoles: { event_id: string; role_id: string }[],
 ) => {
-    const eventIdToMentionUsers = new Map<number, string[]>();
-    const eventIdToMentionRoles = new Map<number, string[]>();
+    const eventIdToMentionUsers = new Map<string, string[]>();
+    const eventIdToMentionRoles = new Map<string, string[]>();
     for (const mentionUser of mentionUsers) {
         if (!eventIdToMentionUsers.has(mentionUser.event_id)) {
             eventIdToMentionUsers.set(mentionUser.event_id, []);
