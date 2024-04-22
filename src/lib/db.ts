@@ -53,11 +53,10 @@ export class DBWrapper {
         mentionRoleIds: string[] = [],
         notifyType: NotifyType = 'normal' as NotifyType,
     ) {
-        let id = 0;
-        while (true) {
+        let id: number;
+        do{
             id = getRandomInt(1, 1000000);
-            if (!(await this.checkEventExists(id))) break;
-        }
+        }while (await this.checkEventExists(id));
         const result = await this.db
             .insert(events)
             .values({
@@ -150,7 +149,7 @@ export class DBWrapper {
         );
     }
     async deleteEvent(id: number) {
-        const [deletedMentionUsers, deletedMentionRoles, deletedEvent] = await Promise.all([
+        const [, , deletedEvent] = await Promise.all([
             this.db.delete(mention_users).where(eq(mention_users.event_id, id)).run(),
             this.db.delete(mention_roles).where(eq(mention_roles.event_id, id)).run(),
             this.db.delete(events).where(eq(events.id, id)).returning(),

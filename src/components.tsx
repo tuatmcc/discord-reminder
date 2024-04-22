@@ -1,4 +1,4 @@
-import { jsx } from 'hono/jsx';
+import { jsx } from 'hono/jsx'; // eslint-disable-line @typescript-eslint/no-unused-vars
 import { FullEvent } from './types/event';
 import { formatDateToString } from './lib/date';
 

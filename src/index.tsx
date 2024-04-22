@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { jsx } from 'hono/jsx';
+import { jsx } from 'hono/jsx'; // eslint-disable-line @typescript-eslint/no-unused-vars
 import {
     APIInteractionResponse,
     ApplicationCommandType,
@@ -191,6 +191,7 @@ app.post('/', async (c) => {
     }
 });
 
+
 // 定期実行する処理
 // https://zenn.dev/toraco/articles/55f359cbf94862
 
@@ -272,6 +273,7 @@ const addFutureContests = async (env: Bindings) => {
     }
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const scheduled: ExportedHandlerScheduledHandler<Bindings> = async (event, env, ctx) => {
     switch (event.cron) {
         case '* * * * *':
