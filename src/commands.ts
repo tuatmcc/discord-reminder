@@ -70,7 +70,13 @@ export const ADD_COMMAND: RESTPostAPIApplicationCommandsJSONBody = {
         {
             type: ApplicationCommandOptionType.String,
             name: 'notifytype',
-            description: 'type of notification',
+            description: 'type of notification (once, normal)',
+            required: false,
+        },
+        {
+            type: ApplicationCommandOptionType.Channel,
+            name: 'channel',
+            description: 'channel to post the event',
             required: false,
         },
     ],

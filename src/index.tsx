@@ -150,7 +150,8 @@ app.post('/', async (c) => {
                     return buildNormalInteractionResponse(c, 'Invalid date format');
                 }
                 let content = '',
-                    notifyType = 'normal';
+                    notifyType = 'normal',
+                    channelId = c.env.DISCORD_BOT_CHANNEL_ID;
                 const users = [],
                     roles = [];
                 const [dbUsers, dbRoles] = await Promise.all([db.readUsers(), db.readRoles()]);
@@ -160,6 +161,9 @@ app.post('/', async (c) => {
                     }
                     if (option.name === 'notifytype') {
                         notifyType = (option as APIApplicationCommandInteractionDataStringOption).value;
+                    }
+                    if (option.name === 'channel') {
+                        channelId = (option as APIApplicationCommandInteractionDataStringOption).value;
                     }
                     if (option.type === ApplicationCommandOptionType.String) continue;
                     const mentionId = (option as APIApplicationCommandInteractionDataMentionableOption).value;
@@ -178,7 +182,7 @@ app.post('/', async (c) => {
                         title: title,
                         content: content,
                         date: parsedDateResult.date,
-                        channelId: c.env.DISCORD_BOT_CHANNEL_ID,
+                        channelId: channelId,
                         notifyFrequency: notifyType,
                     },
                     users,
