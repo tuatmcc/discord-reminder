@@ -16,7 +16,7 @@ main = "src/index.tsx"
 binding = "DB"
 database_name = "discord-reminder"
 database_id = "7faafe6d-c63f-49f3-be9b-2415c0ff75be"
-migrations_dir = "drizzle/migrations"
+migrations_dir = "drizzle"
 
 [triggers]
 crons = ["* * * * *", "0 * * * *"]
