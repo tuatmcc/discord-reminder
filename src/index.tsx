@@ -17,72 +17,15 @@ import { DBWrapper } from './lib/db';
 import { parseStringToDate } from './lib/date';
 import { buildContestEventMessage, buildDisplayEventsMessageWithMentionables, buildMentionHeader } from './lib/message';
 import { RESTAPIWrapper, authenticateRequest, buildNormalInteractionResponse } from './lib/discord';
-import { Reminder, ReminderAdmin } from './components';
+import { Reminder } from './components';
 import { getFutureContests } from './lib/crawler';
-import { basicAuth } from 'hono/basic-auth';
 import { marked } from 'marked';
 import { v4 as uuid } from 'uuid';
 
+import admin from './admin';
+
 // 何分前に通知するか
 const ALART_TIMINGS = new Set([5, 10, 15, 30, 60]);
-
-const admin = new Hono<{ Bindings: Bindings }>();
-
-admin.use('/*', async (c, next) => {
-    return basicAuth({
-        username: c.env.BASIC_AUTH_USERNAME,
-        password: c.env.BASIC_AUTH_PASSWORD,
-    })(c, next);
-});
-
-admin.get('/', async (c) => {
-    const db = new DBWrapper(c.env.DB);
-    const events = await db.readEvents();
-    for (const event of events) {
-        event.title = await marked(event.title);
-        event.content = await marked(event.content);
-    }
-    return c.html(<ReminderAdmin events={events} />);
-});
-
-admin.post('/', async (c) => {
-    const db = new DBWrapper(c.env.DB);
-    const body = await c.req.parseBody();
-    const { title, time, date } = body;
-    console.log(body);
-    if (typeof title === 'string' && typeof time === 'string' && typeof date === 'string') {
-        const dateString = date + ' ' + time;
-        const parsedResult = parseStringToDate(dateString);
-        if (parsedResult.success) {
-            await db.createEvent({
-                id: uuid(),
-                title: title,
-                content: '',
-                date: parsedResult.date,
-                notifyFrequency: 'normal',
-                channelId: c.env.DISCORD_BOT_CHANNEL_ID,
-            });
-        }
-    }
-    return c.redirect('/admin');
-});
-
-admin.post('/delete', async (c) => {
-    const db = new DBWrapper(c.env.DB);
-    const id = (await c.req.parseBody())['id'];
-    if (typeof id === 'string' && (await db.checkEventExists(id))) await db.deleteEvent(id);
-    return c.redirect('/admin');
-});
-
-admin.get('/update', async (c) => {
-    await Promise.all([updateUserTable(c.env), updateRoleTable(c.env), updateChannelTable(c.env)]);
-    return c.redirect('/admin');
-});
-
-admin.get('/update/contests', async (c) => {
-    await addFutureContests(c.env);
-    return c.redirect('/admin');
-});
 
 const app = new Hono<{ Bindings: Bindings }>();
 app.route('/admin', admin);
@@ -235,21 +178,6 @@ const notifyNearEvents = async (env: Bindings) => {
                 break;
         }
     }
-};
-
-const updateUserTable = async (env: Bindings) => {
-    const guildUsers = await new RESTAPIWrapper(env.DISCORD_BOT_TOKEN).getGuildMembers(env.DISCORD_BOT_GUILD_ID);
-    await new DBWrapper(env.DB).createUsers(guildUsers);
-};
-
-const updateRoleTable = async (env: Bindings) => {
-    const guildRoles = await new RESTAPIWrapper(env.DISCORD_BOT_TOKEN).getGuildRoles(env.DISCORD_BOT_GUILD_ID);
-    await new DBWrapper(env.DB).createRoles(guildRoles);
-};
-
-const updateChannelTable = async (env: Bindings) => {
-    const guildChannels = await new RESTAPIWrapper(env.DISCORD_BOT_TOKEN).getGuildChannels(env.DISCORD_BOT_GUILD_ID);
-    await new DBWrapper(env.DB).createChannels(guildChannels);
 };
 
 const addFutureContests = async (env: Bindings) => {
