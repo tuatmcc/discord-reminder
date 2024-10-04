@@ -4,11 +4,7 @@ import { eq } from 'drizzle-orm';
 import { formatDateToString, parseStringToDate } from './date';
 import { events, users, roles, channels, mention_roles, mention_users } from './schema';
 
-import { Role } from '../types/role';
-import { User } from '../types/user';
-import { Channel } from '../types/channel';
-import { Event } from '../types/event';
-import { NotifyFrequency } from '../types/notifyFrequency';
+import { Role, User, Channel, Event, NotifyFrequency } from '../types';
 
 export type DBEvent = {
     id: string;

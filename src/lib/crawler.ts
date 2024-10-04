@@ -1,6 +1,6 @@
 import { load } from 'cheerio';
 import { ParseOptions, parse } from 'date-fns';
-import { Contest } from '../types/contest';
+import { Contest } from '../types';
 
 const ATCODER_CONTESTS_URL = 'https://atcoder.jp/contests/';
 

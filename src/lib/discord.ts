@@ -3,9 +3,7 @@ import { Button, ButtonStyleTypes, MessageComponentTypes, verifyKey } from 'disc
 import { APIGuildMember, APIInteraction, APIInteractionResponse, InteractionResponseType, Routes } from 'discord-api-types/v10';
 import { REST, makeURLSearchParams } from '@discordjs/rest';
 
-import { Role } from '../types/role';
-import { User } from '../types/user';
-import { Channel } from '../types/channel';
+import { Role, User, Channel } from '../types';
 
 const BITFIELD_EPHEMERAL = 1 << 6; // EPHEMERAL (see: https://discord.com/developers/docs/resources/channel#message-object-message-flags)
 

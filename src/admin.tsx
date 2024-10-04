@@ -9,10 +9,9 @@ import { marked } from 'marked';
 import { ReminderAdmin } from './components';
 import { v4 as uuid } from 'uuid';
 
-import { RESTAPIWrapper} from './lib/discord';
-import { buildContestEventMessage} from './lib/message';
+import { RESTAPIWrapper } from './lib/discord';
+import { buildContestEventMessage } from './lib/message';
 import { getFutureContests } from './lib/crawler';
-
 
 const admin = new Hono<{ Bindings: Bindings }>();
 
@@ -22,7 +21,6 @@ admin.use('/*', async (c, next) => {
         password: c.env.BASIC_AUTH_PASSWORD,
     })(c, next);
 });
-
 
 admin.get('/', async (c) => {
     const db = new DBWrapper(c.env.DB);

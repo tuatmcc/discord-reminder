@@ -1,5 +1,5 @@
-import { Event } from '../types/event';
-import { Contest } from '../types/contest';
+import { Event, Contest } from '../types';
+
 import { formatDateToString } from './date';
 
 export const buildMentionHeader = (roleIds: string[], userIds: string[]) => {

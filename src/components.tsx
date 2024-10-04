@@ -1,5 +1,5 @@
 import { jsx } from 'hono/jsx'; // eslint-disable-line @typescript-eslint/no-unused-vars
-import { Event } from './types/event';
+import { Event } from './types';
 import { formatDateToString } from './lib/date';
 
 export const Reminder = (props: { events: Event[] }) => {
